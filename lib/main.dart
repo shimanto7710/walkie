@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -56,16 +63,48 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  String _firebaseStatus = 'Initializing...';
+  String _realtimeData = 'No data yet';
+  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+
+  @override
+  void initState() {
+    super.initState();
+    _testFirebaseConnection();
+    _setupRealtimeListener();
+  }
+
+  void _testFirebaseConnection() async {
+    try {
+      // Test Firebase Realtime Database connection
+      await _database.child('test').set('Hello Firebase Realtime!');
+      setState(() {
+        _firebaseStatus = '✅ Firebase Realtime Connected!';
+      });
+    } catch (e) {
+      setState(() {
+        _firebaseStatus = '❌ Firebase Error: $e';
+      });
+    }
+  }
+
+  void _setupRealtimeListener() {
+    // Listen to real-time changes
+    _database.child('counter').onValue.listen((event) {
+      if (event.snapshot.exists) {
+        setState(() {
+          _realtimeData = 'Realtime data: ${event.snapshot.value}';
+        });
+      }
+    });
+  }
 
   void _incrementCounter() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
       _counter++;
     });
+    // Update Firebase Realtime Database
+    _database.child('counter').set(_counter);
   }
 
   @override
@@ -105,6 +144,67 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            // Firebase Status
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _firebaseStatus.contains('✅') 
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _firebaseStatus.contains('✅') 
+                      ? Colors.green
+                      : Colors.red,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Firebase Realtime Status:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _firebaseStatus,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _firebaseStatus.contains('✅') 
+                          ? Colors.green[700]
+                          : Colors.red[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Realtime Data Display
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue, width: 1),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Realtime Database:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _realtimeData,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.blue),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
             const Text(
               'You have pushed the button this many times:',
             ),
