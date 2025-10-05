@@ -37,28 +37,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to auth state changes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.listen<AuthState>(authProvider, (previous, next) {
-        if (next.isAuthenticated) {
-          // Navigate to home screen on successful login
-          context.go('/home');
-        } else if (next.errorMessage != null) {
-          // Show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next.errorMessage!),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      });
-    });
+    // Set default values for testing
+    _emailController.text = 'guler@gmail.com';
+    _passwordController.text = '123456';
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    
+    // Listen to auth state changes
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      print('🔍 Auth state changed:');
+      print('  Previous: ${previous?.isAuthenticated}');
+      print('  Next: ${next.isAuthenticated}');
+      print('  Error: ${next.errorMessage}');
+      print('  User: ${next.currentUser?.name}');
+      
+      if (next.isAuthenticated) {
+        print('✅ Login successful, navigating to home...');
+        // Navigate to home screen on successful login
+        context.go('/home');
+      } else if (next.errorMessage != null) {
+        print('❌ Login failed: ${next.errorMessage}');
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
     
     return Scaffold(
       backgroundColor: Colors.grey[50],

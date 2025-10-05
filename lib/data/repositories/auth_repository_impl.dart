@@ -14,18 +14,26 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User>> login(String email, String password) async {
+    print('🔐 AuthRepository.login called with: $email');
     try {
       final user = await _dataSource.authenticateUser(email, password);
+      print('🔍 DataSource returned user: ${user?.name}');
+      
       if (user != null) {
+        print('✅ User found, updating status to online...');
         // Update user status to online
         await _dataSource.updateUserStatus(user.id, true);
+        print('✅ User status updated successfully');
         return Right(user);
       } else {
+        print('❌ No user found with these credentials');
         return Left(AuthFailure('Invalid email or password'));
       }
     } on ServerException catch (e) {
+      print('❌ Server exception: ${e.message}');
       return Left(ServerFailure(e.message));
     } catch (e) {
+      print('❌ Unexpected error: $e');
       return Left(UnknownFailure('Unexpected error: $e'));
     }
   }

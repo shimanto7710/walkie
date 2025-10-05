@@ -18,7 +18,9 @@ class FirebaseUserDataSource {
               .map((entry) => User.fromJson({
                     'id': entry.key,
                     'name': entry.value['name'] ?? '',
-                    'isOnline': entry.value['status'] == true,
+                    'email': entry.value['email'] ?? '',
+                    'password': entry.value['pass'] ?? '',
+                    'status': entry.value['status'] == true,
                     'lastActive': entry.value['lastActive']?.toString() ?? '',
                   }))
               .toList();
@@ -49,7 +51,9 @@ class FirebaseUserDataSource {
             .map((entry) => User.fromJson({
                   'id': entry.key,
                   'name': entry.value['name'] ?? '',
-                  'isOnline': entry.value['status'] == true,
+                  'email': entry.value['email'] ?? '',
+                  'password': entry.value['pass'] ?? '',
+                  'status': entry.value['status'] == true,
                   'lastActive': entry.value['lastActive']?.toString() ?? '',
                 }))
             .toList();
@@ -77,6 +81,8 @@ class FirebaseUserDataSource {
     try {
       await _database.ref('users').child(user.id).set({
         'name': user.name,
+        'email': user.email,
+        'pass': user.password,
         'status': user.status,
         'lastActive': user.lastActive,
       });

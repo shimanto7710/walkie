@@ -10,13 +10,24 @@ class FirebaseAuthDataSource {
   FirebaseAuthDataSource(this._database);
 
   Future<User?> authenticateUser(String email, String password) async {
+    print('🔥 FirebaseAuthDataSource.authenticateUser called');
+    print('  Email: $email');
+    print('  Password: $password');
+    
     try {
       final username = email.split('@').first;
+      print('  Username extracted: $username');
+      
       final userRef = _database.ref('users/$username');
+      print('  Firebase path: users/$username');
+      
       final snapshot = await userRef.get();
+      print('  Snapshot exists: ${snapshot.exists}');
 
       if (snapshot.exists) {
         final userData = Map<String, dynamic>.from(snapshot.value as Map);
+        print('  User data from Firebase: $userData');
+        
         final user = User.fromJson({
           'id': username,
           'name': userData['name'],
@@ -25,14 +36,25 @@ class FirebaseAuthDataSource {
           'status': userData['status'],
           'lastActive': userData['lastActive'],
         });
+        
+        print('  User object created: ${user.name}');
+        print('  Stored password: ${user.password}');
+        print('  Entered password: $password');
+        print('  Passwords match: ${user.password == password}');
 
         // Check if password matches
         if (user.password == password) {
+          print('✅ Password matches, returning user');
           return user;
+        } else {
+          print('❌ Password does not match');
         }
+      } else {
+        print('❌ User not found in Firebase');
       }
       return null;
     } catch (e) {
+      print('❌ Exception in authenticateUser: $e');
       throw ServerException('Authentication failed: $e');
     }
   }
