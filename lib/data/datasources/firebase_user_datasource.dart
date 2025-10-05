@@ -96,6 +96,119 @@ class FirebaseUserDataSource {
     }
   }
 
+  Future<List<User>> getFriendsOfUser(String userId) async {
+    try {
+      print('🔍 Getting friends of user: $userId');
+      
+      // First get the current user's friends list
+      final userRef = _database.ref('users/$userId');
+      final userSnapshot = await userRef.get();
+      
+      if (!userSnapshot.exists) {
+        print('❌ User not found: $userId');
+        return [];
+      }
+      
+      final userData = Map<String, dynamic>.from(userSnapshot.value as Map);
+      final friendsData = _convertFriendsData(userData['friends']);
+      
+      print('📱 User friends data: $friendsData');
+      
+      if (friendsData.isEmpty) {
+        print('📱 No friends found for user: $userId');
+        return [];
+      }
+      
+      // Get all users
+      final allUsersSnapshot = await _database.ref('users').get();
+      if (!allUsersSnapshot.exists) {
+        print('❌ No users found in database');
+        return [];
+      }
+      
+      final allUsersData = allUsersSnapshot.value as Map<dynamic, dynamic>;
+      final friends = <User>[];
+      
+      // Filter only the friends
+      for (final friendId in friendsData.keys) {
+        if (allUsersData.containsKey(friendId)) {
+          final friendData = allUsersData[friendId];
+          final friend = User.fromJson({
+            'id': friendId,
+            'name': friendData['name'] ?? '',
+            'email': friendData['email'] ?? '',
+            'password': friendData['pass'] ?? '',
+            'status': friendData['status'] == true,
+            'lastActive': friendData['lastActive']?.toString() ?? '',
+            'friends': _convertFriendsData(friendData['friends']),
+          });
+          friends.add(friend);
+          print('✅ Added friend: ${friend.name} (${friend.id})');
+        } else {
+          print('⚠️ Friend not found in database: $friendId');
+        }
+      }
+      
+      print('📱 Total friends found: ${friends.length}');
+      return friends;
+    } catch (e) {
+      print('❌ Error getting friends: $e');
+      throw ServerException('Failed to get friends: $e');
+    }
+  }
+
+  Stream<List<User>> watchFriendsOfUser(String userId) {
+    try {
+      print('🔍 Watching friends of user: $userId');
+      
+      return _database.ref('users').onValue.map((event) async {
+        if (!event.snapshot.exists) {
+          return <User>[];
+        }
+        
+        // Get the current user's friends list
+        final userRef = _database.ref('users/$userId');
+        final userSnapshot = await userRef.get();
+        
+        if (!userSnapshot.exists) {
+          return <User>[];
+        }
+        
+        final userData = Map<String, dynamic>.from(userSnapshot.value as Map);
+        final friendsData = _convertFriendsData(userData['friends']);
+        
+        if (friendsData.isEmpty) {
+          return <User>[];
+        }
+        
+        // Get all users data
+        final allUsersData = event.snapshot.value as Map<dynamic, dynamic>;
+        final friends = <User>[];
+        
+        // Filter only the friends
+        for (final friendId in friendsData.keys) {
+          if (allUsersData.containsKey(friendId)) {
+            final friendData = allUsersData[friendId];
+            final friend = User.fromJson({
+              'id': friendId,
+              'name': friendData['name'] ?? '',
+              'email': friendData['email'] ?? '',
+              'password': friendData['pass'] ?? '',
+              'status': friendData['status'] == true,
+              'lastActive': friendData['lastActive']?.toString() ?? '',
+              'friends': _convertFriendsData(friendData['friends']),
+            });
+            friends.add(friend);
+          }
+        }
+        
+        return friends;
+      }).asyncMap((future) => future);
+    } catch (e) {
+      throw ServerException('Failed to watch friends: $e');
+    }
+  }
+
   Future<void> addUser(User user) async {
     try {
       await _database.ref('users').child(user.id).set({

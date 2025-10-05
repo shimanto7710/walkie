@@ -56,4 +56,25 @@ class UserRepositoryImpl implements UserRepository {
       throw ServerException('Failed to watch users: $e');
     }
   }
+
+  @override
+  Future<Either<Failure, List<User>>> getFriendsOfUser(String userId) async {
+    try {
+      final friends = await _dataSource.getFriendsOfUser(userId);
+      return Right(friends);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure('Unexpected error: $e'));
+    }
+  }
+
+  @override
+  Stream<List<User>> watchFriendsOfUser(String userId) {
+    try {
+      return _dataSource.watchFriendsOfUser(userId);
+    } catch (e) {
+      throw ServerException('Failed to watch friends: $e');
+    }
+  }
 }

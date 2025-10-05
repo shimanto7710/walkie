@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../provider/home_provider.dart';
+import '../provider/friends_provider.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
@@ -11,7 +11,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync = ref.watch(usersNotifierProvider);
+    final friendsAsync = ref.watch(friendsNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -48,8 +48,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: usersAsync.when(
-        data: (users) => users.isEmpty
+      body: friendsAsync.when(
+        data: (friends) => friends.isEmpty
             ? const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -61,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     SizedBox(height: 16),
                     Text(
-                      'No users found',
+                      'No friends found',
                       style: TextStyle(
                         fontSize: 18,
                         color: Colors.grey,
@@ -69,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Users will appear here when they connect',
+                      'Add friends to see them here',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey,
@@ -79,12 +79,12 @@ class HomeScreen extends ConsumerWidget {
                 ),
               )
             : ListView.builder(
-                itemCount: users.length,
+                itemCount: friends.length,
                 itemBuilder: (context, index) {
-                  final user = users[index];
+                  final friend = friends[index];
                   return UserListItem(
-                    user: user,
-                    onTap: () => _toggleUserStatus(ref, user),
+                    user: friend,
+                    onTap: () => _toggleFriendStatus(ref, friend),
                   );
                 },
               ),
@@ -123,7 +123,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Error loading users',
+                'Error loading friends',
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.red[700],
@@ -137,7 +137,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.refresh(watchUsersProvider),
+                onPressed: () => ref.invalidate(friendsNotifierProvider),
                 child: const Text('Retry'),
               ),
             ],
@@ -147,8 +147,8 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  void _toggleUserStatus(WidgetRef ref, User user) {
-    ref.read(usersNotifierProvider.notifier).toggleUserStatus(user);
+  void _toggleFriendStatus(WidgetRef ref, User friend) {
+    ref.read(friendsNotifierProvider.notifier).toggleFriendStatus(friend);
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
