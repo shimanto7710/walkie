@@ -48,10 +48,10 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i873.AuthRepositoryImpl(gh<_i366.FirebaseAuthDataSource>()));
     gh.factory<_i60.UserRepositoryImpl>(
         () => _i60.UserRepositoryImpl(gh<_i291.FirebaseUserDataSource>()));
-    gh.factory<_i325.LoginUseCase>(
-        () => _i325.LoginUseCase(gh<_i756.AuthRepository>()));
     gh.factory<_i678.SignupUseCase>(
         () => _i678.SignupUseCase(gh<_i756.AuthRepository>()));
+    gh.factory<_i325.LoginUseCase>(
+        () => _i325.LoginUseCase(gh<_i756.AuthRepository>()));
     return this;
   }
 }

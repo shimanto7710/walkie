@@ -9,6 +9,23 @@ class FirebaseAuthDataSource {
 
   FirebaseAuthDataSource(this._database);
 
+  Map<String, bool> _convertFriendsData(dynamic friendsData) {
+    if (friendsData == null) return {};
+    
+    try {
+      if (friendsData is Map) {
+        return friendsData.map((key, value) => MapEntry(
+          key.toString(),
+          value is bool ? value : false,
+        ));
+      }
+    } catch (e) {
+      print('❌ Error converting friends data: $e');
+    }
+    
+    return {};
+  }
+
   Future<User?> authenticateUser(String email, String password) async {
     print('🔥 FirebaseAuthDataSource.authenticateUser called');
     print('  Email: $email');
@@ -35,6 +52,7 @@ class FirebaseAuthDataSource {
           'password': userData['pass'],
           'status': userData['status'],
           'lastActive': userData['lastActive'],
+          'friends': _convertFriendsData(userData['friends']),
         });
         
         print('  User object created: ${user.name}');
@@ -85,6 +103,7 @@ class FirebaseAuthDataSource {
           'password': userData['pass'],
           'status': userData['status'],
           'lastActive': userData['lastActive'],
+          'friends': _convertFriendsData(userData['friends']),
         });
       }
       return null;
@@ -136,6 +155,7 @@ class FirebaseAuthDataSource {
         'password': password,
         'status': true,
         'lastActive': currentTime,
+        'friends': {},
       });
     } catch (e) {
       print('❌ Exception in createUser: $e');

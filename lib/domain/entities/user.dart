@@ -12,6 +12,7 @@ class User with _$User {
     required String password,
     required bool status,
     required String lastActive,
+    @Default({}) Map<String, bool> friends,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

@@ -26,6 +26,7 @@ mixin _$User {
   String get password => throw _privateConstructorUsedError;
   bool get status => throw _privateConstructorUsedError;
   String get lastActive => throw _privateConstructorUsedError;
+  Map<String, bool> get friends => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -47,7 +48,8 @@ abstract class $UserCopyWith<$Res> {
       String email,
       String password,
       bool status,
-      String lastActive});
+      String lastActive,
+      Map<String, bool> friends});
 }
 
 /// @nodoc
@@ -71,6 +73,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? password = null,
     Object? status = null,
     Object? lastActive = null,
+    Object? friends = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -97,6 +100,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.lastActive
           : lastActive // ignore: cast_nullable_to_non_nullable
               as String,
+      friends: null == friends
+          ? _value.friends
+          : friends // ignore: cast_nullable_to_non_nullable
+              as Map<String, bool>,
     ) as $Val);
   }
 }
@@ -114,7 +121,8 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String email,
       String password,
       bool status,
-      String lastActive});
+      String lastActive,
+      Map<String, bool> friends});
 }
 
 /// @nodoc
@@ -135,6 +143,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? password = null,
     Object? status = null,
     Object? lastActive = null,
+    Object? friends = null,
   }) {
     return _then(_$UserImpl(
       id: null == id
@@ -161,6 +170,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.lastActive
           : lastActive // ignore: cast_nullable_to_non_nullable
               as String,
+      friends: null == friends
+          ? _value._friends
+          : friends // ignore: cast_nullable_to_non_nullable
+              as Map<String, bool>,
     ));
   }
 }
@@ -174,7 +187,9 @@ class _$UserImpl implements _User {
       required this.email,
       required this.password,
       required this.status,
-      required this.lastActive});
+      required this.lastActive,
+      final Map<String, bool> friends = const {}})
+      : _friends = friends;
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserImplFromJson(json);
@@ -191,10 +206,18 @@ class _$UserImpl implements _User {
   final bool status;
   @override
   final String lastActive;
+  final Map<String, bool> _friends;
+  @override
+  @JsonKey()
+  Map<String, bool> get friends {
+    if (_friends is EqualUnmodifiableMapView) return _friends;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_friends);
+  }
 
   @override
   String toString() {
-    return 'User(id: $id, name: $name, email: $email, password: $password, status: $status, lastActive: $lastActive)';
+    return 'User(id: $id, name: $name, email: $email, password: $password, status: $status, lastActive: $lastActive, friends: $friends)';
   }
 
   @override
@@ -209,13 +232,14 @@ class _$UserImpl implements _User {
                 other.password == password) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.lastActive, lastActive) ||
-                other.lastActive == lastActive));
+                other.lastActive == lastActive) &&
+            const DeepCollectionEquality().equals(other._friends, _friends));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, name, email, password, status, lastActive);
+  int get hashCode => Object.hash(runtimeType, id, name, email, password,
+      status, lastActive, const DeepCollectionEquality().hash(_friends));
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -240,7 +264,8 @@ abstract class _User implements User {
       required final String email,
       required final String password,
       required final bool status,
-      required final String lastActive}) = _$UserImpl;
+      required final String lastActive,
+      final Map<String, bool> friends}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
 
@@ -256,6 +281,8 @@ abstract class _User implements User {
   bool get status;
   @override
   String get lastActive;
+  @override
+  Map<String, bool> get friends;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

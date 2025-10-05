@@ -9,6 +9,23 @@ class FirebaseUserDataSource {
 
   FirebaseUserDataSource(this._database);
 
+  Map<String, bool> _convertFriendsData(dynamic friendsData) {
+    if (friendsData == null) return {};
+    
+    try {
+      if (friendsData is Map) {
+        return friendsData.map((key, value) => MapEntry(
+          key.toString(),
+          value is bool ? value : false,
+        ));
+      }
+    } catch (e) {
+      print('❌ Error converting friends data: $e');
+    }
+    
+    return {};
+  }
+
   Stream<List<User>> watchUsers() {
     try {
       return _database.ref('users').onValue.map((event) {
@@ -22,6 +39,7 @@ class FirebaseUserDataSource {
                     'password': entry.value['pass'] ?? '',
                     'status': entry.value['status'] == true,
                     'lastActive': entry.value['lastActive']?.toString() ?? '',
+                    'friends': _convertFriendsData(entry.value['friends']),
                   }))
               .toList();
         }
@@ -55,6 +73,7 @@ class FirebaseUserDataSource {
                   'password': entry.value['pass'] ?? '',
                   'status': entry.value['status'] == true,
                   'lastActive': entry.value['lastActive']?.toString() ?? '',
+                  'friends': _convertFriendsData(entry.value['friends']),
                 }))
             .toList();
 

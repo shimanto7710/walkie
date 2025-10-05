@@ -13,6 +13,10 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       password: json['password'] as String,
       status: json['status'] as bool,
       lastActive: json['lastActive'] as String,
+      friends: (json['friends'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, e as bool),
+          ) ??
+          const {},
     );
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
@@ -23,4 +27,5 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'password': instance.password,
       'status': instance.status,
       'lastActive': instance.lastActive,
+      'friends': instance.friends,
     };
