@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../provider/friends_provider.dart';
-import '../../../../domain/entities/user.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
 
@@ -84,7 +83,7 @@ class HomeScreen extends ConsumerWidget {
                   final friend = friends[index];
                   return UserListItem(
                     user: friend,
-                    onTap: () => _toggleFriendStatus(ref, friend),
+                    onTap: null, // No tap action - status is managed automatically
                   );
                 },
               ),
@@ -147,9 +146,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  void _toggleFriendStatus(WidgetRef ref, User friend) {
-    ref.read(friendsNotifierProvider.notifier).toggleFriendStatus(friend);
-  }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(

@@ -44,30 +44,6 @@ class FriendsNotifier extends _$FriendsNotifier {
     return friends;
   }
 
-  Future<void> toggleFriendStatus(User friend) async {
-    print("🔄 Toggling friend status for: ${friend.name}");
-    final userRepository = getIt<UserRepository>();
-    final result = await userRepository.updateUserStatus(friend.id, !friend.status);
-
-    result.fold(
-      (failure) {
-        print("❌ Error updating friend status: ${failure.toString()}");
-        throw Exception(failure.toString());
-      },
-      (_) {
-        print("✅ Friend status updated successfully");
-        // Update local state optimistically
-        final currentFriends = state.value ?? [];
-        final updatedFriends = currentFriends.map((f) {
-          if (f.id == friend.id) {
-            return friend.copyWith(status: !friend.status);
-          }
-          return f;
-        }).toList();
-        state = AsyncValue.data(updatedFriends);
-      },
-    );
-  }
 }
 
 @riverpod

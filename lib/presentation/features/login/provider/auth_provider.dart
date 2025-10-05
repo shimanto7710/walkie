@@ -6,6 +6,7 @@ import '../../../../domain/usecases/signup_usecase.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/utils/session_helper.dart';
+import '../../../../domain/repositories/user_repository.dart';
 
 part 'auth_provider.freezed.dart';
 
@@ -59,8 +60,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // Get current user ID before clearing state
+    final currentUserId = state.currentUser?.id;
+    
     // Clear session
     await SessionHelper.clearLoginSession();
+    
+    // Update user status to offline in Firebase
+    if (currentUserId != null) {
+      try {
+        final userRepository = getIt<UserRepository>();
+        await userRepository.updateUserStatus(currentUserId, false);
+        print('✅ User status updated to offline: $currentUserId');
+      } catch (e) {
+        print('❌ Error updating user status on logout: $e');
+        // Don't throw error - logout should still succeed
+      }
+    }
+    
     state = const AuthState();
   }
 
