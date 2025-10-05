@@ -50,6 +50,7 @@ class DefaultFirebaseOptions {
     projectId: 'walkie-e86f4',
     authDomain: 'walkie-e86f4.firebaseapp.com',
     storageBucket: 'walkie-e86f4.firebasestorage.app',
+    databaseURL: 'https://walkie-e86f4-default-rtdb.firebaseio.com',
     measurementId: 'G-XXXXXXXXXX',
   );
 
@@ -59,6 +60,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1078145163561',
     projectId: 'walkie-e86f4',
     storageBucket: 'walkie-e86f4.firebasestorage.app',
+    databaseURL: 'https://walkie-e86f4-default-rtdb.firebaseio.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
