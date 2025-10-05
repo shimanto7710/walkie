@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_database/firebase_database.dart';
 import '../provider/home_provider.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
-import '../../../../network_test.dart';
+import '../../login/provider/auth_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -16,54 +15,36 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Walkie - Users'),
+        title: const Text('Walkie'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          // Profile Icon
           IconButton(
-            icon: const Icon(Icons.wifi),
-            onPressed: () async {
-              // Test network connectivity
-              await testNetworkConnectivity();
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              // TODO: Navigate to profile screen
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Network test completed - check console')),
+                const SnackBar(content: Text('Profile feature coming soon!')),
               );
             },
-            tooltip: 'Test Network',
+            tooltip: 'Profile',
           ),
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () async {
-              // Test Firebase connection
-              try {
-                final database = FirebaseDatabase.instance;
-                print("🧪 Manual Firebase test starting...");
-                print("🔍 Database URL: ${database.databaseURL}");
-                
-                final snapshot = await database.ref('test').get().timeout(
-                  const Duration(seconds: 5),
-                  onTimeout: () {
-                    print("⏰ Manual test timed out");
-                    throw Exception('Manual test timed out');
-                  },
-                );
-                
-                print("✅ Manual test successful: ${snapshot.exists}");
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Firebase test successful!')),
-                );
-              } catch (e) {
-                print("❌ Manual test failed: $e");
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Firebase test failed: $e')),
-                );
-              }
-            },
-            tooltip: 'Test Firebase',
-          ),
+          // Settings Icon
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => context.go('/firebase-test'),
-            tooltip: 'Firebase Test',
+            onPressed: () {
+              // TODO: Navigate to settings screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Settings feature coming soon!')),
+              );
+            },
+            tooltip: 'Settings',
+          ),
+          // Logout Button
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _showLogoutDialog(context, ref),
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -168,5 +149,40 @@ class HomeScreen extends ConsumerWidget {
 
   void _toggleUserStatus(WidgetRef ref, User user) {
     ref.read(usersNotifierProvider.notifier).toggleUserStatus(user);
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _handleLogout(context, ref);
+              },
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleLogout(BuildContext context, WidgetRef ref) async {
+    await ref.read(authProvider.notifier).logout();
+    if (context.mounted) {
+      context.go('/login');
+    }
   }
 }

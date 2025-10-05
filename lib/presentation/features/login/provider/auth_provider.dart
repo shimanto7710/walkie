@@ -5,6 +5,7 @@ import '../../../../domain/usecases/login_usecase.dart';
 import '../../../../domain/usecases/signup_usecase.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/utils/session_helper.dart';
 
 part 'auth_provider.freezed.dart';
 
@@ -40,7 +41,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
           errorMessage: _getErrorMessage(failure),
         );
       },
-      (user) {
+      (user) async {
+        // Save session
+        await SessionHelper.saveLoginSession(
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+        );
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
@@ -51,7 +58,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
-  void logout() {
+  Future<void> logout() async {
+    // Clear session
+    await SessionHelper.clearLoginSession();
     state = const AuthState();
   }
 
@@ -81,8 +90,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         print('📱 State updated: isLoading = false, isAuthenticated = false');
       },
-      (user) {
+      (user) async {
         print('✅ Signup successful: ${user.name}');
+        // Save session
+        await SessionHelper.saveLoginSession(
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+        );
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
