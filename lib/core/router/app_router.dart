@@ -1,10 +1,16 @@
 import 'package:go_router/go_router.dart';
 import '../../presentation/features/home/ui/home_screen.dart';
 import '../../presentation/features/firebase_test/ui/firebase_test_page.dart';
+import '../../presentation/features/login/ui/login_screen.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/home',
+  initialLocation: '/login',
   routes: [
+    GoRoute(
+      path: '/login',
+      name: 'login',
+      builder: (context, state) => const LoginScreen(),
+    ),
     GoRoute(
       path: '/home',
       name: 'home',

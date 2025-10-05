@@ -10,10 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    print("🚀 Starting Firebase initialization...");
-    
-    // Test network connectivity first
-    print("🔍 Testing network connectivity...");
+
     try {
       final result = await InternetAddress.lookup('google.com');
       if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
