@@ -21,7 +21,7 @@ class UserListItem extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: user.isOnline ? Colors.green : Colors.grey,
+              backgroundColor: user.status ? Colors.green : Colors.grey,
               child: Text(
                 user.initial,
                 style: const TextStyle(
@@ -38,7 +38,7 @@ class UserListItem extends StatelessWidget {
                 width: 16,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: user.isOnline ? Colors.green : Colors.grey,
+                  color: user.status ? Colors.green : Colors.grey,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Colors.white,
@@ -62,7 +62,7 @@ class UserListItem extends StatelessWidget {
             Text(
               user.statusText,
               style: TextStyle(
-                color: user.isOnline ? Colors.green[700] : Colors.grey[600],
+                color: user.status ? Colors.green[700] : Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -77,8 +77,8 @@ class UserListItem extends StatelessWidget {
           ],
         ),
         trailing: Icon(
-          user.isOnline ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-          color: user.isOnline ? Colors.green : Colors.grey,
+          user.status ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+          color: user.status ? Colors.green : Colors.grey,
         ),
       ),
     );

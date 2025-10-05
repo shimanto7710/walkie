@@ -8,7 +8,9 @@ class User with _$User {
   const factory User({
     required String id,
     required String name,
-    required bool isOnline,
+    required String email,
+    required String password,
+    required bool status,
     required String lastActive,
   }) = _User;
 
@@ -16,7 +18,9 @@ class User with _$User {
 }
 
 extension UserExtension on User {
-  String get statusText => isOnline ? 'Online' : 'Offline';
+  String get statusText => status ? 'Online' : 'Offline';
   
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : 'U';
+  
+  String get username => email.split('@').first;
 }

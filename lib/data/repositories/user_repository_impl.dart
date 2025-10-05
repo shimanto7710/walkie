@@ -25,9 +25,9 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateUserStatus(String userId, bool isOnline) async {
+  Future<Either<Failure, void>> updateUserStatus(String userId, bool status) async {
     try {
-      await _dataSource.updateUserStatus(userId, isOnline);
+      await _dataSource.updateUserStatus(userId, status);
       return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

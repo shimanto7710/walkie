@@ -39,7 +39,7 @@ class UsersNotifier extends _$UsersNotifier {
   Future<void> toggleUserStatus(User user) async {
     print("🔄 Toggling user status for: ${user.name}");
     final updateUserStatus = getIt<UpdateUserStatus>();
-    final result = await updateUserStatus(user.id, !user.isOnline);
+    final result = await updateUserStatus(user.id, !user.status);
 
     result.fold(
       (failure) {
@@ -52,7 +52,7 @@ class UsersNotifier extends _$UsersNotifier {
         final currentUsers = state.value ?? [];
         final updatedUsers = currentUsers.map((u) {
           if (u.id == user.id) {
-            return user.copyWith(isOnline: !user.isOnline);
+            return user.copyWith(status: !user.status);
           }
           return u;
         }).toList();

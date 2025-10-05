@@ -8,4 +8,5 @@ class Failure with _$Failure {
   const factory Failure.networkFailure(String message) = NetworkFailure;
   const factory Failure.cacheFailure(String message) = CacheFailure;
   const factory Failure.unknownFailure(String message) = UnknownFailure;
+  const factory Failure.authFailure(String message) = AuthFailure;
 }

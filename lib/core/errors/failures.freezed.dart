@@ -23,6 +23,7 @@ mixin _$Failure {
     required TResult Function(String message) networkFailure,
     required TResult Function(String message) cacheFailure,
     required TResult Function(String message) unknownFailure,
+    required TResult Function(String message) authFailure,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -31,6 +32,7 @@ mixin _$Failure {
     TResult? Function(String message)? networkFailure,
     TResult? Function(String message)? cacheFailure,
     TResult? Function(String message)? unknownFailure,
+    TResult? Function(String message)? authFailure,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -39,6 +41,7 @@ mixin _$Failure {
     TResult Function(String message)? networkFailure,
     TResult Function(String message)? cacheFailure,
     TResult Function(String message)? unknownFailure,
+    TResult Function(String message)? authFailure,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -48,6 +51,7 @@ mixin _$Failure {
     required TResult Function(NetworkFailure value) networkFailure,
     required TResult Function(CacheFailure value) cacheFailure,
     required TResult Function(UnknownFailure value) unknownFailure,
+    required TResult Function(AuthFailure value) authFailure,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -56,6 +60,7 @@ mixin _$Failure {
     TResult? Function(NetworkFailure value)? networkFailure,
     TResult? Function(CacheFailure value)? cacheFailure,
     TResult? Function(UnknownFailure value)? unknownFailure,
+    TResult? Function(AuthFailure value)? authFailure,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
@@ -64,6 +69,7 @@ mixin _$Failure {
     TResult Function(NetworkFailure value)? networkFailure,
     TResult Function(CacheFailure value)? cacheFailure,
     TResult Function(UnknownFailure value)? unknownFailure,
+    TResult Function(AuthFailure value)? authFailure,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -182,6 +188,7 @@ class _$ServerFailureImpl implements ServerFailure {
     required TResult Function(String message) networkFailure,
     required TResult Function(String message) cacheFailure,
     required TResult Function(String message) unknownFailure,
+    required TResult Function(String message) authFailure,
   }) {
     return serverFailure(message);
   }
@@ -193,6 +200,7 @@ class _$ServerFailureImpl implements ServerFailure {
     TResult? Function(String message)? networkFailure,
     TResult? Function(String message)? cacheFailure,
     TResult? Function(String message)? unknownFailure,
+    TResult? Function(String message)? authFailure,
   }) {
     return serverFailure?.call(message);
   }
@@ -204,6 +212,7 @@ class _$ServerFailureImpl implements ServerFailure {
     TResult Function(String message)? networkFailure,
     TResult Function(String message)? cacheFailure,
     TResult Function(String message)? unknownFailure,
+    TResult Function(String message)? authFailure,
     required TResult orElse(),
   }) {
     if (serverFailure != null) {
@@ -219,6 +228,7 @@ class _$ServerFailureImpl implements ServerFailure {
     required TResult Function(NetworkFailure value) networkFailure,
     required TResult Function(CacheFailure value) cacheFailure,
     required TResult Function(UnknownFailure value) unknownFailure,
+    required TResult Function(AuthFailure value) authFailure,
   }) {
     return serverFailure(this);
   }
@@ -230,6 +240,7 @@ class _$ServerFailureImpl implements ServerFailure {
     TResult? Function(NetworkFailure value)? networkFailure,
     TResult? Function(CacheFailure value)? cacheFailure,
     TResult? Function(UnknownFailure value)? unknownFailure,
+    TResult? Function(AuthFailure value)? authFailure,
   }) {
     return serverFailure?.call(this);
   }
@@ -241,6 +252,7 @@ class _$ServerFailureImpl implements ServerFailure {
     TResult Function(NetworkFailure value)? networkFailure,
     TResult Function(CacheFailure value)? cacheFailure,
     TResult Function(UnknownFailure value)? unknownFailure,
+    TResult Function(AuthFailure value)? authFailure,
     required TResult orElse(),
   }) {
     if (serverFailure != null) {
@@ -339,6 +351,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
     required TResult Function(String message) networkFailure,
     required TResult Function(String message) cacheFailure,
     required TResult Function(String message) unknownFailure,
+    required TResult Function(String message) authFailure,
   }) {
     return networkFailure(message);
   }
@@ -350,6 +363,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
     TResult? Function(String message)? networkFailure,
     TResult? Function(String message)? cacheFailure,
     TResult? Function(String message)? unknownFailure,
+    TResult? Function(String message)? authFailure,
   }) {
     return networkFailure?.call(message);
   }
@@ -361,6 +375,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
     TResult Function(String message)? networkFailure,
     TResult Function(String message)? cacheFailure,
     TResult Function(String message)? unknownFailure,
+    TResult Function(String message)? authFailure,
     required TResult orElse(),
   }) {
     if (networkFailure != null) {
@@ -376,6 +391,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
     required TResult Function(NetworkFailure value) networkFailure,
     required TResult Function(CacheFailure value) cacheFailure,
     required TResult Function(UnknownFailure value) unknownFailure,
+    required TResult Function(AuthFailure value) authFailure,
   }) {
     return networkFailure(this);
   }
@@ -387,6 +403,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
     TResult? Function(NetworkFailure value)? networkFailure,
     TResult? Function(CacheFailure value)? cacheFailure,
     TResult? Function(UnknownFailure value)? unknownFailure,
+    TResult? Function(AuthFailure value)? authFailure,
   }) {
     return networkFailure?.call(this);
   }
@@ -398,6 +415,7 @@ class _$NetworkFailureImpl implements NetworkFailure {
     TResult Function(NetworkFailure value)? networkFailure,
     TResult Function(CacheFailure value)? cacheFailure,
     TResult Function(UnknownFailure value)? unknownFailure,
+    TResult Function(AuthFailure value)? authFailure,
     required TResult orElse(),
   }) {
     if (networkFailure != null) {
@@ -495,6 +513,7 @@ class _$CacheFailureImpl implements CacheFailure {
     required TResult Function(String message) networkFailure,
     required TResult Function(String message) cacheFailure,
     required TResult Function(String message) unknownFailure,
+    required TResult Function(String message) authFailure,
   }) {
     return cacheFailure(message);
   }
@@ -506,6 +525,7 @@ class _$CacheFailureImpl implements CacheFailure {
     TResult? Function(String message)? networkFailure,
     TResult? Function(String message)? cacheFailure,
     TResult? Function(String message)? unknownFailure,
+    TResult? Function(String message)? authFailure,
   }) {
     return cacheFailure?.call(message);
   }
@@ -517,6 +537,7 @@ class _$CacheFailureImpl implements CacheFailure {
     TResult Function(String message)? networkFailure,
     TResult Function(String message)? cacheFailure,
     TResult Function(String message)? unknownFailure,
+    TResult Function(String message)? authFailure,
     required TResult orElse(),
   }) {
     if (cacheFailure != null) {
@@ -532,6 +553,7 @@ class _$CacheFailureImpl implements CacheFailure {
     required TResult Function(NetworkFailure value) networkFailure,
     required TResult Function(CacheFailure value) cacheFailure,
     required TResult Function(UnknownFailure value) unknownFailure,
+    required TResult Function(AuthFailure value) authFailure,
   }) {
     return cacheFailure(this);
   }
@@ -543,6 +565,7 @@ class _$CacheFailureImpl implements CacheFailure {
     TResult? Function(NetworkFailure value)? networkFailure,
     TResult? Function(CacheFailure value)? cacheFailure,
     TResult? Function(UnknownFailure value)? unknownFailure,
+    TResult? Function(AuthFailure value)? authFailure,
   }) {
     return cacheFailure?.call(this);
   }
@@ -554,6 +577,7 @@ class _$CacheFailureImpl implements CacheFailure {
     TResult Function(NetworkFailure value)? networkFailure,
     TResult Function(CacheFailure value)? cacheFailure,
     TResult Function(UnknownFailure value)? unknownFailure,
+    TResult Function(AuthFailure value)? authFailure,
     required TResult orElse(),
   }) {
     if (cacheFailure != null) {
@@ -652,6 +676,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
     required TResult Function(String message) networkFailure,
     required TResult Function(String message) cacheFailure,
     required TResult Function(String message) unknownFailure,
+    required TResult Function(String message) authFailure,
   }) {
     return unknownFailure(message);
   }
@@ -663,6 +688,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
     TResult? Function(String message)? networkFailure,
     TResult? Function(String message)? cacheFailure,
     TResult? Function(String message)? unknownFailure,
+    TResult? Function(String message)? authFailure,
   }) {
     return unknownFailure?.call(message);
   }
@@ -674,6 +700,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
     TResult Function(String message)? networkFailure,
     TResult Function(String message)? cacheFailure,
     TResult Function(String message)? unknownFailure,
+    TResult Function(String message)? authFailure,
     required TResult orElse(),
   }) {
     if (unknownFailure != null) {
@@ -689,6 +716,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
     required TResult Function(NetworkFailure value) networkFailure,
     required TResult Function(CacheFailure value) cacheFailure,
     required TResult Function(UnknownFailure value) unknownFailure,
+    required TResult Function(AuthFailure value) authFailure,
   }) {
     return unknownFailure(this);
   }
@@ -700,6 +728,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
     TResult? Function(NetworkFailure value)? networkFailure,
     TResult? Function(CacheFailure value)? cacheFailure,
     TResult? Function(UnknownFailure value)? unknownFailure,
+    TResult? Function(AuthFailure value)? authFailure,
   }) {
     return unknownFailure?.call(this);
   }
@@ -711,6 +740,7 @@ class _$UnknownFailureImpl implements UnknownFailure {
     TResult Function(NetworkFailure value)? networkFailure,
     TResult Function(CacheFailure value)? cacheFailure,
     TResult Function(UnknownFailure value)? unknownFailure,
+    TResult Function(AuthFailure value)? authFailure,
     required TResult orElse(),
   }) {
     if (unknownFailure != null) {
@@ -731,5 +761,167 @@ abstract class UnknownFailure implements Failure {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$UnknownFailureImplCopyWith<_$UnknownFailureImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$AuthFailureImplCopyWith<$Res>
+    implements $FailureCopyWith<$Res> {
+  factory _$$AuthFailureImplCopyWith(
+          _$AuthFailureImpl value, $Res Function(_$AuthFailureImpl) then) =
+      __$$AuthFailureImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String message});
+}
+
+/// @nodoc
+class __$$AuthFailureImplCopyWithImpl<$Res>
+    extends _$FailureCopyWithImpl<$Res, _$AuthFailureImpl>
+    implements _$$AuthFailureImplCopyWith<$Res> {
+  __$$AuthFailureImplCopyWithImpl(
+      _$AuthFailureImpl _value, $Res Function(_$AuthFailureImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of Failure
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? message = null,
+  }) {
+    return _then(_$AuthFailureImpl(
+      null == message
+          ? _value.message
+          : message // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$AuthFailureImpl implements AuthFailure {
+  const _$AuthFailureImpl(this.message);
+
+  @override
+  final String message;
+
+  @override
+  String toString() {
+    return 'Failure.authFailure(message: $message)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$AuthFailureImpl &&
+            (identical(other.message, message) || other.message == message));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, message);
+
+  /// Create a copy of Failure
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$AuthFailureImplCopyWith<_$AuthFailureImpl> get copyWith =>
+      __$$AuthFailureImplCopyWithImpl<_$AuthFailureImpl>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(String message) serverFailure,
+    required TResult Function(String message) networkFailure,
+    required TResult Function(String message) cacheFailure,
+    required TResult Function(String message) unknownFailure,
+    required TResult Function(String message) authFailure,
+  }) {
+    return authFailure(message);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(String message)? serverFailure,
+    TResult? Function(String message)? networkFailure,
+    TResult? Function(String message)? cacheFailure,
+    TResult? Function(String message)? unknownFailure,
+    TResult? Function(String message)? authFailure,
+  }) {
+    return authFailure?.call(message);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(String message)? serverFailure,
+    TResult Function(String message)? networkFailure,
+    TResult Function(String message)? cacheFailure,
+    TResult Function(String message)? unknownFailure,
+    TResult Function(String message)? authFailure,
+    required TResult orElse(),
+  }) {
+    if (authFailure != null) {
+      return authFailure(message);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(ServerFailure value) serverFailure,
+    required TResult Function(NetworkFailure value) networkFailure,
+    required TResult Function(CacheFailure value) cacheFailure,
+    required TResult Function(UnknownFailure value) unknownFailure,
+    required TResult Function(AuthFailure value) authFailure,
+  }) {
+    return authFailure(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(ServerFailure value)? serverFailure,
+    TResult? Function(NetworkFailure value)? networkFailure,
+    TResult? Function(CacheFailure value)? cacheFailure,
+    TResult? Function(UnknownFailure value)? unknownFailure,
+    TResult? Function(AuthFailure value)? authFailure,
+  }) {
+    return authFailure?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(ServerFailure value)? serverFailure,
+    TResult Function(NetworkFailure value)? networkFailure,
+    TResult Function(CacheFailure value)? cacheFailure,
+    TResult Function(UnknownFailure value)? unknownFailure,
+    TResult Function(AuthFailure value)? authFailure,
+    required TResult orElse(),
+  }) {
+    if (authFailure != null) {
+      return authFailure(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class AuthFailure implements Failure {
+  const factory AuthFailure(final String message) = _$AuthFailureImpl;
+
+  @override
+  String get message;
+
+  /// Create a copy of Failure
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$AuthFailureImplCopyWith<_$AuthFailureImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

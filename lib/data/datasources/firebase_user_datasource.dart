@@ -62,10 +62,10 @@ class FirebaseUserDataSource {
     }
   }
 
-  Future<void> updateUserStatus(String userId, bool isOnline) async {
+  Future<void> updateUserStatus(String userId, bool status) async {
     try {
       await _database.ref('users').child(userId).update({
-        'status': isOnline,
+        'status': status,
         'lastActive': DateTime.now().millisecondsSinceEpoch.toString(),
       });
     } catch (e) {
@@ -77,7 +77,7 @@ class FirebaseUserDataSource {
     try {
       await _database.ref('users').child(user.id).set({
         'name': user.name,
-        'status': user.isOnline,
+        'status': user.status,
         'lastActive': user.lastActive,
       });
     } catch (e) {

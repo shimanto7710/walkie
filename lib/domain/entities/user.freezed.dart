@@ -22,7 +22,9 @@ User _$UserFromJson(Map<String, dynamic> json) {
 mixin _$User {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  bool get isOnline => throw _privateConstructorUsedError;
+  String get email => throw _privateConstructorUsedError;
+  String get password => throw _privateConstructorUsedError;
+  bool get status => throw _privateConstructorUsedError;
   String get lastActive => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
@@ -39,7 +41,13 @@ abstract class $UserCopyWith<$Res> {
   factory $UserCopyWith(User value, $Res Function(User) then) =
       _$UserCopyWithImpl<$Res, User>;
   @useResult
-  $Res call({String id, String name, bool isOnline, String lastActive});
+  $Res call(
+      {String id,
+      String name,
+      String email,
+      String password,
+      bool status,
+      String lastActive});
 }
 
 /// @nodoc
@@ -59,7 +67,9 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? isOnline = null,
+    Object? email = null,
+    Object? password = null,
+    Object? status = null,
     Object? lastActive = null,
   }) {
     return _then(_value.copyWith(
@@ -71,9 +81,17 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      isOnline: null == isOnline
-          ? _value.isOnline
-          : isOnline // ignore: cast_nullable_to_non_nullable
+      email: null == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String,
+      password: null == password
+          ? _value.password
+          : password // ignore: cast_nullable_to_non_nullable
+              as String,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
               as bool,
       lastActive: null == lastActive
           ? _value.lastActive
@@ -90,7 +108,13 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       __$$UserImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String id, String name, bool isOnline, String lastActive});
+  $Res call(
+      {String id,
+      String name,
+      String email,
+      String password,
+      bool status,
+      String lastActive});
 }
 
 /// @nodoc
@@ -107,7 +131,9 @@ class __$$UserImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? isOnline = null,
+    Object? email = null,
+    Object? password = null,
+    Object? status = null,
     Object? lastActive = null,
   }) {
     return _then(_$UserImpl(
@@ -119,9 +145,17 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      isOnline: null == isOnline
-          ? _value.isOnline
-          : isOnline // ignore: cast_nullable_to_non_nullable
+      email: null == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String,
+      password: null == password
+          ? _value.password
+          : password // ignore: cast_nullable_to_non_nullable
+              as String,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
               as bool,
       lastActive: null == lastActive
           ? _value.lastActive
@@ -137,7 +171,9 @@ class _$UserImpl implements _User {
   const _$UserImpl(
       {required this.id,
       required this.name,
-      required this.isOnline,
+      required this.email,
+      required this.password,
+      required this.status,
       required this.lastActive});
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
@@ -148,13 +184,17 @@ class _$UserImpl implements _User {
   @override
   final String name;
   @override
-  final bool isOnline;
+  final String email;
+  @override
+  final String password;
+  @override
+  final bool status;
   @override
   final String lastActive;
 
   @override
   String toString() {
-    return 'User(id: $id, name: $name, isOnline: $isOnline, lastActive: $lastActive)';
+    return 'User(id: $id, name: $name, email: $email, password: $password, status: $status, lastActive: $lastActive)';
   }
 
   @override
@@ -164,15 +204,18 @@ class _$UserImpl implements _User {
             other is _$UserImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.isOnline, isOnline) ||
-                other.isOnline == isOnline) &&
+            (identical(other.email, email) || other.email == email) &&
+            (identical(other.password, password) ||
+                other.password == password) &&
+            (identical(other.status, status) || other.status == status) &&
             (identical(other.lastActive, lastActive) ||
                 other.lastActive == lastActive));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, isOnline, lastActive);
+  int get hashCode =>
+      Object.hash(runtimeType, id, name, email, password, status, lastActive);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -194,7 +237,9 @@ abstract class _User implements User {
   const factory _User(
       {required final String id,
       required final String name,
-      required final bool isOnline,
+      required final String email,
+      required final String password,
+      required final bool status,
       required final String lastActive}) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
@@ -204,7 +249,11 @@ abstract class _User implements User {
   @override
   String get name;
   @override
-  bool get isOnline;
+  String get email;
+  @override
+  String get password;
+  @override
+  bool get status;
   @override
   String get lastActive;
 

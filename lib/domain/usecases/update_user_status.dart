@@ -9,7 +9,7 @@ class UpdateUserStatus {
 
   UpdateUserStatus(this._repository);
 
-  Future<Either<Failure, void>> call(String userId, bool isOnline) async {
-    return await _repository.updateUserStatus(userId, isOnline);
+  Future<Either<Failure, void>> call(String userId, bool status) async {
+    return await _repository.updateUserStatus(userId, status);
   }
 }
