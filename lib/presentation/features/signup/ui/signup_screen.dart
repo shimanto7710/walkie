@@ -1,69 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../provider/auth_provider.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../../../widgets/custom_button.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends ConsumerStatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleSignup() {
     if (_formKey.currentState!.validate()) {
-      ref.read(authProvider.notifier).login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      // TODO: Implement signup logic
+      print('Name: ${_nameController.text}');
+      print('Email: ${_emailController.text}');
+      print('Password: ${_passwordController.text}');
+      print('Confirm Password: ${_confirmPasswordController.text}');
     }
   }
 
   @override
-  void initState() {
-    super.initState();
-    // Set default values for testing
-    _emailController.text = 'guler@gmail.com';
-    _passwordController.text = '123456';
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    
-    // Listen to auth state changes
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      
-      if (next.isAuthenticated) {
-        context.go('/home');
-      } else if (next.errorMessage != null) {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage!),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    });
-    
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.deepPurple),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -88,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Walkie',
+                      'Join Walkie',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -98,7 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Welcome back!',
+                      'Create your account to get started',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey,
@@ -106,6 +93,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
+
+                    // Name Field
+                    CustomTextField(
+                      controller: _nameController,
+                      labelText: 'Full Name',
+                      hintText: 'Enter your full name',
+                      prefixIcon: Icons.person_outlined,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your full name';
+                        }
+                        if (value.length < 2) {
+                          return 'Name must be at least 2 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
                     // Email Field
                     CustomTextField(
@@ -156,30 +161,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         return null;
                       },
                     ),
+                    const SizedBox(height: 16),
+
+                    // Confirm Password Field
+                    CustomTextField(
+                      controller: _confirmPasswordController,
+                      labelText: 'Confirm Password',
+                      hintText: 'Confirm your password',
+                      prefixIcon: Icons.lock_outlined,
+                      obscureText: _obscureConfirmPassword,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please confirm your password';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 32),
 
-                    // Login Button
+                    // Signup Button
                     CustomButton(
-                      text: 'Login',
-                      onPressed: _handleLogin,
-                      isLoading: authState.isLoading,
+                      text: 'Create Account',
+                      onPressed: _handleSignup,
                     ),
                     const SizedBox(height: 24),
 
-                    // Signup Link
+                    // Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text(
-                          "Don't have an account? ",
+                          'Already have an account? ',
                           style: TextStyle(
                             color: Colors.grey,
                           ),
                         ),
                         TextButton(
-                          onPressed: () => context.go('/signup'),
+                          onPressed: () => context.go('/login'),
                           child: const Text(
-                            'Sign Up',
+                            'Sign In',
                             style: TextStyle(
                               color: Colors.deepPurple,
                               fontWeight: FontWeight.w600,
@@ -188,21 +223,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-
-                    // Forgot Password Link
-                    /*TextButton(
-                      onPressed: () {
-                        // TODO: Implement forgot password
-                        print('Forgot password tapped');
-                      },
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          color: Colors.deepPurple,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),*/
                   ],
                 ),
               ),
