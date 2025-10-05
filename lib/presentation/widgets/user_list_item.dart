@@ -4,11 +4,13 @@ import '../../domain/entities/user.dart';
 class UserListItem extends StatelessWidget {
   final User user;
   final VoidCallback? onTap;
+  final VoidCallback? onCall;
 
   const UserListItem({
     super.key,
     required this.user,
     this.onTap,
+    this.onCall,
   });
 
   @override
@@ -76,9 +78,25 @@ class UserListItem extends StatelessWidget {
               ),
           ],
         ),
-        trailing: Icon(
-          user.status ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-          color: user.status ? Colors.green : Colors.grey,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Call button
+            if (onCall != null)
+              IconButton(
+                onPressed: onCall,
+                icon: const Icon(
+                  Icons.call,
+                  color: Colors.blue,
+                ),
+                tooltip: 'Call ${user.name}',
+              ),
+            // Status indicator
+            Icon(
+              user.status ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: user.status ? Colors.green : Colors.grey,
+            ),
+          ],
         ),
       ),
     );

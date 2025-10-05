@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../provider/friends_provider.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
+import '../../../../domain/entities/user.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -84,6 +85,7 @@ class HomeScreen extends ConsumerWidget {
                   return UserListItem(
                     user: friend,
                     onTap: null, // No tap action - status is managed automatically
+                    onCall: () => _startCall(context, friend),
                   );
                 },
               ),
@@ -146,6 +148,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  void _startCall(BuildContext context, User friend) {
+    print('📞 Starting call with ${friend.name}');
+    context.go('/call/${friend.id}');
+  }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
