@@ -92,4 +92,54 @@ class FirebaseAuthDataSource {
       throw ServerException('Failed to get current user: $e');
     }
   }
+
+  Future<User> createUser(String name, String email, String password) async {
+    print('🔥 FirebaseAuthDataSource.createUser called');
+    print('  Name: $name');
+    print('  Email: $email');
+    print('  Password: $password');
+    
+    try {
+      final username = email.split('@').first;
+      print('  Username extracted: $username');
+      
+      final userRef = _database.ref('users/$username');
+      print('  Firebase path: users/$username');
+      
+      // Check if user already exists
+      final snapshot = await userRef.get();
+      print('  User already exists: ${snapshot.exists}');
+      
+      if (snapshot.exists) {
+        throw ServerException('User with this email already exists');
+      }
+      
+      // Create new user
+      final currentTime = DateTime.now().millisecondsSinceEpoch.toString();
+      final userData = {
+        'name': name,
+        'email': email,
+        'pass': password,
+        'status': true, // Set as online when created
+        'lastActive': currentTime,
+      };
+      
+      print('  Creating user with data: $userData');
+      await userRef.set(userData);
+      print('✅ User created successfully');
+      
+      // Return the created user
+      return User.fromJson({
+        'id': username,
+        'name': name,
+        'email': email,
+        'password': password,
+        'status': true,
+        'lastActive': currentTime,
+      });
+    } catch (e) {
+      print('❌ Exception in createUser: $e');
+      throw ServerException('Failed to create user: $e');
+    }
+  }
 }

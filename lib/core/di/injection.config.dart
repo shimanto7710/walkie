@@ -19,6 +19,7 @@ import 'package:walkie/domain/repositories/auth_repository.dart' as _i756;
 import 'package:walkie/domain/repositories/user_repository.dart' as _i685;
 import 'package:walkie/domain/usecases/get_users.dart' as _i651;
 import 'package:walkie/domain/usecases/login_usecase.dart' as _i325;
+import 'package:walkie/domain/usecases/signup_usecase.dart' as _i678;
 import 'package:walkie/domain/usecases/update_user_status.dart' as _i543;
 import 'package:walkie/domain/usecases/watch_users.dart' as _i921;
 
@@ -49,6 +50,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i60.UserRepositoryImpl(gh<_i291.FirebaseUserDataSource>()));
     gh.factory<_i325.LoginUseCase>(
         () => _i325.LoginUseCase(gh<_i756.AuthRepository>()));
+    gh.factory<_i678.SignupUseCase>(
+        () => _i678.SignupUseCase(gh<_i756.AuthRepository>()));
     return this;
   }
 }

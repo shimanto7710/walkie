@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/usecases/login_usecase.dart';
+import '../../../../domain/usecases/signup_usecase.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/di/injection.dart';
 
@@ -21,8 +22,9 @@ class AuthState with _$AuthState {
 // Auth Notifier
 class AuthNotifier extends StateNotifier<AuthState> {
   final LoginUseCase _loginUseCase;
+  final SignupUseCase _signupUseCase;
 
-  AuthNotifier(this._loginUseCase) : super(const AuthState());
+  AuthNotifier(this._loginUseCase, this._signupUseCase) : super(const AuthState());
 
   Future<void> login(String email, String password) async {
     
@@ -53,6 +55,45 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState();
   }
 
+  Future<void> signup(String name, String email, String password) async {
+    print('🚀 Starting signup process...');
+    print('  Name: $name');
+    print('  Email: $email');
+    print('  Password: $password');
+    
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    print('📱 State updated: isLoading = true');
+
+    final result = await _signupUseCase(
+      name: name,
+      email: email,
+      password: password,
+    );
+    print('🔍 Signup use case result: $result');
+
+    result.fold(
+      (failure) {
+        print('❌ Signup failed: $failure');
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: false,
+          errorMessage: _getErrorMessage(failure),
+        );
+        print('📱 State updated: isLoading = false, isAuthenticated = false');
+      },
+      (user) {
+        print('✅ Signup successful: ${user.name}');
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          currentUser: user,
+          errorMessage: null,
+        );
+        print('📱 State updated: isLoading = false, isAuthenticated = true');
+      },
+    );
+  }
+
   void clearError() {
     state = state.copyWith(errorMessage: null);
   }
@@ -71,11 +112,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 // Providers
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final loginUseCase = ref.read(loginUseCaseProvider);
-  return AuthNotifier(loginUseCase);
+  final signupUseCase = ref.read(signupUseCaseProvider);
+  return AuthNotifier(loginUseCase, signupUseCase);
 });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
   return getIt<LoginUseCase>();
+});
+
+final signupUseCaseProvider = Provider<SignupUseCase>((ref) {
+  return getIt<SignupUseCase>();
 });
 
 // Computed providers

@@ -39,6 +39,22 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, User>> signup(String name, String email, String password) async {
+    print('🔐 AuthRepository.signup called with: $email');
+    try {
+      final user = await _dataSource.createUser(name, email, password);
+      print('✅ User created successfully: ${user.name}');
+      return Right(user);
+    } on ServerException catch (e) {
+      print('❌ Server exception: ${e.message}');
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      print('❌ Unexpected error: $e');
+      return Left(UnknownFailure('Unexpected error: $e'));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> logout() async {
     try {
       // For now, we'll just return success

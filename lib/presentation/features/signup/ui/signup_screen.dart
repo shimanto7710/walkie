@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../../../widgets/custom_button.dart';
+import '../../login/provider/auth_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -31,16 +32,32 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   void _handleSignup() {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement signup logic
-      print('Name: ${_nameController.text}');
-      print('Email: ${_emailController.text}');
-      print('Password: ${_passwordController.text}');
-      print('Confirm Password: ${_confirmPasswordController.text}');
+      ref.read(authProvider.notifier).signup(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    
+    // Listen to auth state changes
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        context.go('/home');
+      } else if (next.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -198,6 +215,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     CustomButton(
                       text: 'Create Account',
                       onPressed: _handleSignup,
+                      isLoading: authState.isLoading,
                     ),
                     const SizedBox(height: 24),
 
