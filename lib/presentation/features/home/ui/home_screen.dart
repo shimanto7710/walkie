@@ -1,17 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../provider/friends_provider.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
 import '../../../../domain/entities/user.dart';
+import '../../call/provider/webrtc_provider.dart';
+import '../../../../domain/entities/call_state.dart';
+import '../../../../utils/firebase_cleanup.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _webrtcInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize WebRTC for incoming calls
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeWebRTCForIncomingCalls();
+    });
+  }
+
+  void _initializeWebRTCForIncomingCalls() async {
+    if (_webrtcInitialized) return;
+    
+    try {
+      final authState = ref.read(authProvider);
+      if (authState.currentUser != null) {
+        print('🔧 Initializing Simple WebRTC for incoming calls on home screen');
+        final webrtcNotifier = ref.read(webRTCNotifierProvider.notifier);
+        await webrtcNotifier.initialize(authState.currentUser!.id);
+        _webrtcInitialized = true;
+        print('✅ Simple WebRTC initialized for incoming calls');
+      }
+    } catch (e) {
+      print('❌ Failed to initialize Simple WebRTC for incoming calls: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final friendsAsync = ref.watch(friendsNotifierProvider);
+    
+    // Listen for incoming calls and navigate to call screen
+    ref.listen<AsyncValue<CallState>>(callStateStreamProvider, (previous, next) {
+      next.whenData((callState) {
+        if (callState.status == CallStatus.ringing && callState.remoteUserId != null) {
+          print('📞 Incoming call detected on home screen from ${callState.remoteUserId}');
+          
+          // Navigate to call screen
+          context.go('/call/${callState.remoteUserId}');
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -28,6 +77,24 @@ class HomeScreen extends ConsumerWidget {
               );
             },
             tooltip: 'Profile',
+          ),
+          // Clean Signals Button
+          IconButton(
+            icon: const Icon(Icons.cleaning_services),
+            onPressed: () => _showCleanupDialog(context),
+            tooltip: 'Clean Firebase Signals',
+          ),
+          // Debug Handshake Button
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => _testHandshake(context, ref),
+            tooltip: 'Test Handshake',
+          ),
+          // Debug Firebase Listener Button
+          IconButton(
+            icon: const Icon(Icons.wifi),
+            onPressed: () => _testFirebaseListener(context, ref),
+            tooltip: 'Test Firebase Listener',
           ),
           // Settings Icon
           IconButton(
@@ -137,9 +204,23 @@ class HomeScreen extends ConsumerWidget {
                 style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
               ElevatedButton(
-                onPressed: () => ref.invalidate(friendsNotifierProvider),
+                    onPressed: () => ref.invalidate(friendsNotifierProvider),
                 child: const Text('Retry'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () => _cleanupFirebaseSignals(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Clean Signals'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -185,6 +266,225 @@ class HomeScreen extends ConsumerWidget {
     await ref.read(authProvider.notifier).logout();
     if (context.mounted) {
       context.go('/login');
+    }
+  }
+
+  void _showCleanupDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.cleaning_services, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Clean Firebase Signals'),
+            ],
+          ),
+          content: const Text(
+            'This will remove all signal data from Firebase Realtime Database. '
+            'This includes all call requests, offers, answers, and ICE candidates.\n\n'
+            'Are you sure you want to proceed?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _cleanupFirebaseSignals();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Clean Signals'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _cleanupFirebaseSignals() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Cleaning up signals...'),
+            ],
+          ),
+        ),
+      );
+
+      // Get signal count before cleanup
+      final beforeCount = await FirebaseCleanup.getSignalCount();
+      
+      // Clean up signals
+      await FirebaseCleanup.deleteAllSignals();
+      
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        
+        // Show success message with count
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Cleaned up $beforeCount signals from Firebase!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to clean signals: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _testHandshake(BuildContext context, WidgetRef ref) async {
+    try {
+      final authState = ref.read(authProvider);
+      if (authState.currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ No authenticated user found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final currentUserId = authState.currentUser!.id;
+      final currentUserName = authState.currentUser!.name;
+      
+      // Test handshake with ozil
+      final testUserId = currentUserId == 'guler' ? 'ozil' : 'guler';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🧪 Testing handshake: $currentUserName -> $testUserId'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      // Get WebRTC service and test handshake
+      final webrtcNotifier = ref.read(webRTCNotifierProvider.notifier);
+      await webrtcNotifier.startCall(testUserId);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Handshake test initiated! Check logs for details.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Handshake test failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _testFirebaseListener(BuildContext context, WidgetRef ref) async {
+    try {
+      final authState = ref.read(authProvider);
+      if (authState.currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ No authenticated user found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final currentUserId = authState.currentUser!.id;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🧪 Testing Firebase listener for user: $currentUserId'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      // Test Firebase listener directly
+      final database = FirebaseDatabase.instance.ref();
+      final handshakeRef = database.child('handshakes');
+      
+      print('🔥 Firebase test - Setting up listener for handshakes...');
+      
+      // Listen for 10 seconds
+      final subscription = handshakeRef.onValue.listen((event) {
+        print('🔥 Firebase test - Event received: ${event.snapshot.value}');
+        
+        if (event.snapshot.exists) {
+          final data = event.snapshot.value;
+          print('🔥 Firebase test - Data exists: $data');
+          
+          if (data is Map<dynamic, dynamic>) {
+            for (final entry in data.entries) {
+              final handshakeData = Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>);
+              print('🔥 Firebase test - Handshake: ${entry.key} -> $handshakeData');
+              
+              // Check if this handshake involves the current user
+              if (handshakeData['receiverId'] == currentUserId) {
+                print('🔥 Firebase test - Found handshake for current user: $currentUserId');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('🎯 Found handshake for you from: ${handshakeData['callerId']}'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            }
+          }
+        } else {
+          print('🔥 Firebase test - No data exists');
+        }
+      });
+      
+      // Cancel after 10 seconds
+      Future.delayed(const Duration(seconds: 10), () {
+        subscription.cancel();
+        print('🔥 Firebase test - Listener cancelled after 10 seconds');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Firebase listener test completed! Check logs.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      });
+      
+    } catch (e) {
+      print('❌ Firebase listener test error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Firebase listener test failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

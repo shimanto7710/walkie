@@ -22,7 +22,7 @@ final watchFriendsProvider = AutoDisposeStreamProvider<List<User>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef WatchFriendsRef = AutoDisposeStreamProviderRef<List<User>>;
-String _$friendsNotifierHash() => r'acf1d5b3e61c52efc5fdfbee4f8427046e30faf8';
+String _$friendsNotifierHash() => r'4590527ae047f6be7dbe553cf008feaebb84e984';
 
 /// See also [FriendsNotifier].
 @ProviderFor(FriendsNotifier)

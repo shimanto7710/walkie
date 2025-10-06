@@ -5,6 +5,9 @@ import '../../domain/repositories/user_repository.dart';
 import '../../data/repositories/user_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/repositories/webrtc_repository.dart';
+import '../../data/services/webrtc_service.dart';
+import '../../data/services/webrtc_service_simple.dart';
 import 'injection.config.dart';
 
 final getIt = GetIt.instance;
@@ -20,4 +23,6 @@ Future<void> configureDependencies() async {
   // Register repository interfaces
   getIt.registerLazySingleton<UserRepository>(() => getIt<UserRepositoryImpl>());
   getIt.registerLazySingleton<AuthRepository>(() => getIt<AuthRepositoryImpl>());
+  // WebRTC service - using simple service to avoid crashes
+  getIt.registerLazySingleton<WebRTCRepository>(() => WebRTCServiceSimple());
 }

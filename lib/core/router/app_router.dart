@@ -30,29 +30,42 @@ final appRouter = GoRouter(
       name: 'home',
       builder: (context, state) => const HomeScreen(),
     ),
-        GoRoute(
-          path: '/firebase-test',
-          name: 'firebase-test',
-          builder: (context, state) => const FirebaseTestPage(),
-        ),
-        GoRoute(
-          path: '/call/:friendId',
-          name: 'call',
-          builder: (context, state) {
-            final friendId = state.pathParameters['friendId']!;
-            // For now, create a mock user. In real implementation, 
-            // you'd fetch the friend data from the repository
-            final friend = User(
-              id: friendId,
-              name: friendId == 'ozil' ? 'Mesut Ozil' : 'Unknown Friend',
-              email: '$friendId@example.com',
-              password: '',
-              status: true,
-              lastActive: DateTime.now().millisecondsSinceEpoch.toString(),
-              friends: {},
-            );
-            return CallScreen(friend: friend);
-          },
-        ),
-      ],
-    );
+    GoRoute(
+      path: '/firebase-test',
+      name: 'firebase-test',
+      builder: (context, state) => const FirebaseTestPage(),
+    ),
+    GoRoute(
+      path: '/call/:friendId',
+      name: 'call',
+      builder: (context, state) {
+        final friendId = state.pathParameters['friendId']!;
+        // Create a mock user with proper name mapping
+        final friend = User(
+          id: friendId,
+          name: _getFriendName(friendId),
+          email: '$friendId@example.com',
+          password: '',
+          status: true,
+          lastActive: DateTime.now().millisecondsSinceEpoch.toString(),
+          friends: {},
+        );
+        return CallScreen(friend: friend);
+      },
+    ),
+  ],
+);
+
+/// Helper function to get friend name by ID
+String _getFriendName(String friendId) {
+  switch (friendId) {
+    case 'ozil':
+      return 'Mesut Ozil';
+    case 'guler':
+      return 'Arda Guler';
+    case 'james':
+      return 'James Rodriguez';
+    default:
+      return 'Unknown Friend';
+  }
+}
