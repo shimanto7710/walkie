@@ -106,44 +106,20 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isHolding = true;
     });
     
-    // Check current call state
-    final currentCallState = ref.read(simpleCallNotifierProvider);
-    
-    if (currentCallState.status == CallStatus.connected) {
-      // Call is already connected, just start talking
-      return;
-    } else if (currentCallState.status == CallStatus.ringing) {
-      // Call is ringing, don't initiate new call
-      return;
-    } else {
-      // Call is not started yet, initiate the call
-      _startCall();
-    }
+    // Mic button ONLY toggles talking - NO call management
+    // Just start talking, don't interact with call state at all
   }
 
   void _onHoldEnd() {
-    if (!_isCallSustained && !_isSwipeGesture) {
+    // Mic button should ALWAYS work as push-to-talk toggle
+    // Never ends the call, regardless of call state (sustained or not)
+    if (!_isSwipeGesture) {
       setState(() {
         _isHolding = false;
       });
       
-      // Check if call is connected before ending
-      final callState = ref.read(simpleCallNotifierProvider);
-      if (callState.status == CallStatus.connected) {
-        _endCall();
-      } else if (callState.status == CallStatus.calling || callState.status == CallStatus.ringing) {
-        // Give more time for call to complete
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted && !_isCallSustained) {
-            final currentCallState = ref.read(simpleCallNotifierProvider);
-            if (currentCallState.status != CallStatus.connected) {
-              _endCall();
-            }
-          }
-        });
-      } else {
-        _endCall();
-      }
+      // Mic button should NEVER end the call
+      // Just stop talking - call stays active regardless of status
     }
   }
 
@@ -185,9 +161,9 @@ class _CallScreenState extends ConsumerState<CallScreen>
         setState(() {
           // Update UI to show connection is established
         });
-      } else if (next.status == CallStatus.ended) {
-        context.go('/home');
       }
+      // Don't automatically navigate to home when call ends
+      // User must explicitly close the call via back button or close button
     });
 
     final callState = ref.watch(simpleCallNotifierProvider);
@@ -258,7 +234,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
                   _isCallSustained 
                     ? 'Call Active' 
                     : _isHolding 
-                      ? 'Connecting...' 
+                      ? 'Talking...' 
                       : 'Ready to Call',
                   style: TextStyle(
                     color: _isCallSustained 
@@ -379,10 +355,10 @@ class _CallScreenState extends ConsumerState<CallScreen>
       statusText = 'Call Active';
       statusColor = Colors.green;
     } else if (_isHolding) {
-      statusText = 'Connecting...';
+      statusText = 'Talking...';
       statusColor = Colors.orange;
     } else {
-      statusText = 'Hold to Call';
+      statusText = 'Hold to Talk';
       statusColor = Colors.grey[400]!;
     }
     
@@ -408,7 +384,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
       );
     } else if (_isHolding) {
       return const Text(
-        'Connecting automatically...\nSwipe up to sustain call\nRelease to disconnect',
+        'Talking...\nSwipe up to sustain call\nRelease to stop talking',
         style: TextStyle(
           color: Colors.white70,
           fontSize: 16,
@@ -417,7 +393,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
       );
     } else {
       return const Text(
-        'Hold to call and start talking\nSwipe up while holding to sustain call',
+        'Hold to talk\nSwipe up while holding to sustain call\nRelease to stop talking',
         style: TextStyle(
           color: Colors.white70,
           fontSize: 16,
@@ -436,29 +412,28 @@ class _CallScreenState extends ConsumerState<CallScreen>
           Listener(
             onPointerDown: (_) {
               print('🎤 onPointerDown detected - _isCallSustained: $_isCallSustained');
-              if (!_isCallSustained) {
-                print('🎤 Hold started');
-                _onHoldStart();
-              } else {
-                print('🎤 Call already sustained, ignoring hold');
-              }
+              // Mic button should ALWAYS work as push-to-talk toggle
+              print('🎤 Hold started');
+              _onHoldStart();
             },
             onPointerUp: (_) {
               print('🎤 onPointerUp detected - _isCallSustained: $_isCallSustained, _isSwipeGesture: $_isSwipeGesture');
-              if (!_isCallSustained && !_isSwipeGesture) {
+              // Mic button should ALWAYS work as push-to-talk toggle
+              if (!_isSwipeGesture) {
                 print('🎤 Hold ended');
                 _onHoldEnd();
               } else {
-                print('🎤 onPointerUp ignored - call sustained or swipe gesture');
+                print('🎤 onPointerUp ignored - swipe gesture in progress');
               }
             },
             onPointerCancel: (_) {
               print('🎤 onPointerCancel detected - _isCallSustained: $_isCallSustained, _isSwipeGesture: $_isSwipeGesture');
-              if (!_isCallSustained && !_isSwipeGesture) {
+              // Mic button should ALWAYS work as push-to-talk toggle
+              if (!_isSwipeGesture) {
                 print('🎤 Hold cancelled');
                 _onHoldEnd();
               } else {
-                print('🎤 onPointerCancel ignored - call sustained or swipe gesture');
+                print('🎤 onPointerCancel ignored - swipe gesture in progress');
               }
             },
             onPointerMove: (details) {
@@ -469,14 +444,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
                 _onSwipeUp();
               }
             },
-            child: GestureDetector(
-              onTap: () {
-                if (_isCallSustained) {
-                  print('📞 Sustained call tapped - ending call');
-                  _endCall();
-                }
-              },
-              child: AnimatedBuilder(
+            child: AnimatedBuilder(
               animation: Listenable.merge([_pulseAnimation, _swipeAnimation]),
               builder: (context, child) {
                 return Transform.translate(
@@ -513,7 +481,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
                 );
               },
             ),
-            ),
           ),
           
           const SizedBox(height: 20),
@@ -537,7 +504,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
                 _isCallSustained 
                   ? 'Call Active' 
                   : _isHolding 
-                    ? 'Connecting' 
+                    ? 'Talking' 
                     : 'Ready',
                 style: TextStyle(
                   color: _isHolding || _isCallSustained 
