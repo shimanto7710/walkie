@@ -5,8 +5,8 @@ import 'package:firebase_database/firebase_database.dart';
 import '../provider/friends_provider.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
+import '../../call/provider/simple_call_provider.dart';
 import '../../../../domain/entities/user.dart';
-import '../../call/provider/webrtc_provider.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../../../../utils/firebase_cleanup.dart';
 
@@ -35,11 +35,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final authState = ref.read(authProvider);
       if (authState.currentUser != null) {
-        print('🔧 Initializing Simple WebRTC for incoming calls on home screen');
-        final webrtcNotifier = ref.read(webRTCNotifierProvider.notifier);
-        await webrtcNotifier.initialize(authState.currentUser!.id);
+        print('🔧 Simple call UI ready');
         _webrtcInitialized = true;
-        print('✅ Simple WebRTC initialized for incoming calls');
+        print('✅ Simple call UI initialized');
       }
     } catch (e) {
       print('❌ Failed to initialize Simple WebRTC for incoming calls: $e');
@@ -50,16 +48,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final friendsAsync = ref.watch(friendsNotifierProvider);
     
-    // Listen for incoming calls and navigate to call screen
-    ref.listen<AsyncValue<CallState>>(callStateStreamProvider, (previous, next) {
-      next.whenData((callState) {
-        if (callState.status == CallStatus.ringing && callState.remoteUserId != null) {
-          print('📞 Incoming call detected on home screen from ${callState.remoteUserId}');
-          
-          // Navigate to call screen
-          context.go('/call/${callState.remoteUserId}');
-        }
-      });
+    // Listen for call state changes
+    ref.listen<CallState>(simpleCallNotifierProvider, (previous, next) {
+      if (next.status == CallStatus.ringing && next.remoteUserId != null) {
+        print('📞 Incoming call detected on home screen from ${next.remoteUserId}');
+        
+        // Navigate to call screen
+        context.go('/call/${next.remoteUserId}');
+      }
     });
 
     return Scaffold(
@@ -387,13 +383,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-      // Get WebRTC service and test handshake
-      final webrtcNotifier = ref.read(webRTCNotifierProvider.notifier);
-      await webrtcNotifier.startCall(testUserId);
+      // Test simple call functionality
+      final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+      callNotifier.startCall();
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Handshake test initiated! Check logs for details.'),
+          content: Text('✅ Call test initiated!'),
           backgroundColor: Colors.green,
         ),
       );

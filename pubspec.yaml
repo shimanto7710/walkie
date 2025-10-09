@@ -59,8 +59,6 @@ dependencies:
   # Local Storage
   shared_preferences: ^2.2.2
 
-  # WebRTC for audio communication
-  flutter_webrtc: ^0.9.48
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
