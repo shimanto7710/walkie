@@ -1,27 +1,27 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'simple_call_provider.dart';
+part of 'global_handshake_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$simpleCallNotifierHash() =>
-    r'17cd2d988c73fd99e861730d30e2bb007b9918d0';
+String _$globalHandshakeNotifierHash() =>
+    r'82be1c6ef91f46ea0ba68194f2e025af34d1d21b';
 
-/// See also [SimpleCallNotifier].
-@ProviderFor(SimpleCallNotifier)
-final simpleCallNotifierProvider =
-    AutoDisposeNotifierProvider<SimpleCallNotifier, CallState>.internal(
-  SimpleCallNotifier.new,
-  name: r'simpleCallNotifierProvider',
+/// See also [GlobalHandshakeNotifier].
+@ProviderFor(GlobalHandshakeNotifier)
+final globalHandshakeNotifierProvider =
+    AutoDisposeNotifierProvider<GlobalHandshakeNotifier, Handshake?>.internal(
+  GlobalHandshakeNotifier.new,
+  name: r'globalHandshakeNotifierProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$simpleCallNotifierHash,
+      : _$globalHandshakeNotifierHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
-typedef _$SimpleCallNotifier = AutoDisposeNotifier<CallState>;
+typedef _$GlobalHandshakeNotifier = AutoDisposeNotifier<Handshake?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

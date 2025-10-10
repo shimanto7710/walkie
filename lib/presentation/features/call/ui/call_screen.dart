@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../provider/simple_call_provider.dart';
+import '../../login/provider/auth_provider.dart';
 
 class CallScreen extends ConsumerStatefulWidget {
   final User friend;
@@ -74,8 +75,29 @@ class _CallScreenState extends ConsumerState<CallScreen>
 
     _pulseController.repeat(reverse: true);
     _waveController.repeat();
+    
+    // Initialize Firebase handshake when entering call
+    _initializeHandshake();
 
     // No initialization needed for simple call UI
+  }
+
+  void _initializeHandshake() async {
+    try {
+      final authState = ref.read(authProvider);
+      if (authState.currentUser != null) {
+        final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+        
+        await callNotifier.initiateHandshake(
+          callerId: authState.currentUser!.id,
+          receiverId: widget.friend.id,
+        );
+        
+        print('✅ Firebase handshake initialized');
+      }
+    } catch (e) {
+      print('❌ Error initializing handshake: $e');
+    }
   }
 
   void _startCall() {
@@ -97,6 +119,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
     // Reset call state
     final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
     callNotifier.reset();
+    
+    // Clean up handshake (now handled by callNotifier.reset())
     
     super.dispose();
   }
@@ -165,6 +189,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
       // Don't automatically navigate to home when call ends
       // User must explicitly close the call via back button or close button
     });
+
+    // Handshake changes are now handled within the SimpleCallNotifier
 
     final callState = ref.watch(simpleCallNotifierProvider);
     

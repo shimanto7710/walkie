@@ -6,8 +6,10 @@ import '../provider/friends_provider.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
 import '../../call/provider/simple_call_provider.dart';
+import '../../call/provider/global_handshake_provider.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
+import '../../../../domain/entities/handshake.dart';
 import '../../../../utils/firebase_cleanup.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -36,8 +38,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final authState = ref.read(authProvider);
       if (authState.currentUser != null) {
         print('🔧 Simple call UI ready');
+        
+        // Start listening to global handshake changes for this user
+        final globalHandshakeNotifier = ref.read(globalHandshakeNotifierProvider.notifier);
+        globalHandshakeNotifier.listenForUserHandshakes(authState.currentUser!.id);
+        
         _webrtcInitialized = true;
-        print('✅ Simple call UI initialized');
+        print('✅ Simple call UI initialized with global handshake listener');
       }
     } catch (e) {
       print('❌ Failed to initialize Simple WebRTC for incoming calls: $e');
@@ -55,6 +62,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         
         // Navigate to call screen
         context.go('/call/${next.remoteUserId}');
+      }
+    });
+
+    // Listen for global handshake changes from anywhere in the app
+    ref.listen<Handshake?>(globalHandshakeNotifierProvider, (previous, next) {
+      if (next != null) {
+        final authState = ref.read(authProvider);
+        if (authState.currentUser != null) {
+          // Check if this handshake involves the current user
+          if (next.callerId == authState.currentUser!.id || 
+              next.receiverId == authState.currentUser!.id) {
+            
+            print('🌍 Global handshake detected on home screen:');
+            print('   Status: ${next.status}');
+            print('   Caller: ${next.callerId}');
+            print('   Receiver: ${next.receiverId}');
+            
+            // Handle different handshake statuses
+            switch (next.status) {
+              case 'call_initiate':
+                print('📞 New call initiated!');
+                break;
+              case 'call_acknowledge':
+                print('📞 Call acknowledged!');
+                // Navigate to call screen when call is acknowledged
+                if (next.receiverId == authState.currentUser!.id) {
+                  print('📞 Navigating to call screen for incoming call from ${next.callerId}');
+                  context.go('/call/${next.callerId}');
+                }
+                break;
+              case 'ringing':
+                print('📞 Call is ringing!');
+                break;
+              case 'connected':
+                print('📞 Call connected!');
+                break;
+              case 'completed':
+                print('📞 Call completed!');
+                break;
+              default:
+                print('📞 Handshake status: ${next.status}');
+            }
+          }
+        }
       }
     });
 
