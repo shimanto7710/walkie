@@ -8,10 +8,14 @@ import '../../login/provider/auth_provider.dart';
 
 class CallScreen extends ConsumerStatefulWidget {
   final User friend;
+  final bool isIncomingCall;
+  final String? handshakeId;
   
   const CallScreen({
     super.key,
     required this.friend,
+    this.isIncomingCall = false,
+    this.handshakeId,
   });
 
   @override
@@ -86,6 +90,15 @@ class _CallScreenState extends ConsumerState<CallScreen>
     try {
       final authState = ref.read(authProvider);
       if (authState.currentUser != null) {
+        
+        // Skip handshake initialization if this is an incoming call
+        if (widget.isIncomingCall) {
+          print('📞 Incoming call detected - skipping handshake initialization');
+          print('📞 Handshake ID: ${widget.handshakeId}');
+          return;
+        }
+        
+        // Only initialize handshake for outgoing calls
         final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
         
         await callNotifier.initiateHandshake(
@@ -93,7 +106,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
           receiverId: widget.friend.id,
         );
         
-        print('✅ Firebase handshake initialized');
+        print('✅ Firebase handshake initialized for outgoing call');
       }
     } catch (e) {
       print('❌ Error initializing handshake: $e');

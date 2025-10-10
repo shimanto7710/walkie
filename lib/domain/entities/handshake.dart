@@ -23,7 +23,7 @@ class Handshake {
       receiverId: map['receiverId'] ?? '',
       callerIdSent: map['callerIdSent'] ?? false,
       receiverIdSent: map['receiverIdSent'] ?? false,
-      status: map['status'] ?? 'call_initiate',
+      status: map['status'] ?? 'error',
       timestamp: map['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
       lastUpdated: map['lastUpdated'] ?? DateTime.now().millisecondsSinceEpoch,
     );

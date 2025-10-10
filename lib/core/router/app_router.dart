@@ -40,6 +40,12 @@ final appRouter = GoRouter(
       name: 'call',
       builder: (context, state) {
         final friendId = state.pathParameters['friendId']!;
+        final queryParams = state.uri.queryParameters;
+        
+        // Check if this is an incoming call
+        final isIncomingCall = queryParams['incoming'] == 'true';
+        final handshakeId = queryParams['handshakeId'];
+        
         // Create a mock user with proper name mapping
         final friend = User(
           id: friendId,
@@ -50,7 +56,12 @@ final appRouter = GoRouter(
           lastActive: DateTime.now().millisecondsSinceEpoch.toString(),
           friends: {},
         );
-        return CallScreen(friend: friend);
+        
+        return CallScreen(
+          friend: friend,
+          isIncomingCall: isIncomingCall,
+          handshakeId: handshakeId,
+        );
       },
     ),
   ],

@@ -89,7 +89,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Navigate to call screen when call is acknowledged
                 if (next.receiverId == authState.currentUser!.id) {
                   print('📞 Navigating to call screen for incoming call from ${next.callerId}');
-                  context.go('/call/${next.callerId}');
+                  // Pass handshake data to indicate this is an incoming call
+                  context.go('/call/${next.callerId}?incoming=true&handshakeId=${next.callerId}_${next.receiverId}');
                 }
                 break;
               case 'ringing':
