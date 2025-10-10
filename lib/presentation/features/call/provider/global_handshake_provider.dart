@@ -2,18 +2,21 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
+import '../../../../data/services/handshake_operations.dart';
 
 part 'global_handshake_provider.g.dart';
 
 @riverpod
 class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
   FirebaseHandshakeService? _handshakeService;
+  HandshakeOperations? _handshakeOperations;
   StreamSubscription<Handshake>? _handshakeSubscription;
   String? _currentHandshakeId;
 
   @override
   Handshake? build() {
     _handshakeService = FirebaseHandshakeService();
+    _handshakeOperations = HandshakeOperations();
     return null;
   }
 
@@ -87,8 +90,8 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
   /// Handle incoming call: update Firebase and trigger navigation
   Future<void> _handleIncomingCall(Handshake handshake) async {
     try {
-      // Update Firebase status and receiverIdSent in a single operation
-      await _handshakeService?.updateHandshakeStatusAndReceiverSent(
+      // Update Firebase status and receiverIdSent in a single operation using shared utility
+      await _handshakeOperations?.updateHandshakeStatusAndReceiverSent(
         callerId: handshake.callerId,
         receiverId: handshake.receiverId,
         status: 'call_acknowledge',

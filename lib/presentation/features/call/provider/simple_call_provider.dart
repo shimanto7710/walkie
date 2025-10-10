@@ -3,12 +3,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
+import '../../../../data/services/handshake_operations.dart';
 
 part 'simple_call_provider.g.dart';
 
 @riverpod
 class SimpleCallNotifier extends _$SimpleCallNotifier {
   FirebaseHandshakeService? _handshakeService;
+  HandshakeOperations? _handshakeOperations;
   StreamSubscription<Handshake>? _handshakeSubscription;
   String? _currentCallerId;
   String? _currentReceiverId;
@@ -16,6 +18,7 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
   @override
   CallState build() {
     _handshakeService = FirebaseHandshakeService();
+    _handshakeOperations = HandshakeOperations();
     return const CallState();
   }
 
@@ -53,8 +56,8 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
       print('📞 closeCall() called - updating Firebase to close_call');
       print('📞 Caller: $callerId, Receiver: $receiverId');
       
-      // Update Firebase status to 'close_call'
-      await _handshakeService?.updateHandshakeStatus(
+      // Update Firebase status to 'close_call' using shared utility
+      await _handshakeOperations?.updateHandshakeStatus(
         callerId: callerId,
         receiverId: receiverId,
         status: 'close_call',
