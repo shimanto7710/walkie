@@ -70,6 +70,13 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
               // Update Firebase: change status to 'call_acknowledge' and set receiverIdSent to true
               _handleIncomingCall(handshake);
             }
+            
+            // Handle close_call status for both caller and receiver
+            if (handshake.status == 'close_call' && 
+                (handshake.callerId == userId || handshake.receiverId == userId)) {
+              print('🌍 Close call detected in global provider for user: $userId');
+              // The call screen will handle the actual call ending
+            }
           },
           onError: (error) {
             print('❌ User handshake stream error: $error');

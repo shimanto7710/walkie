@@ -102,6 +102,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               case 'completed':
                 print('📞 Call completed!');
                 break;
+              case 'close_call':
+                print('📞 Call closed by other party!');
+                // Handle call closure - could show notification or update UI
+                break;
               default:
                 print('📞 Handshake status: ${next.status}');
             }

@@ -90,23 +90,32 @@ class _CallScreenState extends ConsumerState<CallScreen>
     try {
       final authState = ref.read(authProvider);
       if (authState.currentUser != null) {
-        
-        // Skip handshake initialization if this is an incoming call
-        if (widget.isIncomingCall) {
-          print('📞 Incoming call detected - skipping handshake initialization');
-          print('📞 Handshake ID: ${widget.handshakeId}');
-          return;
-        }
-        
-        // Only initialize handshake for outgoing calls
         final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
         
-        await callNotifier.initiateHandshake(
-          callerId: authState.currentUser!.id,
-          receiverId: widget.friend.id,
-        );
-        
-        print('✅ Firebase handshake initialized for outgoing call');
+        if (widget.isIncomingCall) {
+          print('📞 Incoming call detected - starting to listen for handshake changes');
+          print('📞 Handshake ID: ${widget.handshakeId}');
+          
+          // For incoming calls, just start listening without initializing
+          // Extract caller and receiver from handshakeId or use friend.id as caller
+          final callerId = widget.friend.id; // The friend is the caller in incoming calls
+          final receiverId = authState.currentUser!.id; // Current user is the receiver
+          
+          // Start listening to handshake changes for incoming calls
+          callNotifier.startListeningToHandshake(
+            callerId: callerId,
+            receiverId: receiverId,
+          );
+          
+        } else {
+          // For outgoing calls, initialize handshake and start listening
+          await callNotifier.initiateHandshake(
+            callerId: authState.currentUser!.id,
+            receiverId: widget.friend.id,
+          );
+          
+          print('✅ Firebase handshake initialized for outgoing call');
+        }
       }
     } catch (e) {
       print('❌ Error initializing handshake: $e');
@@ -180,27 +189,42 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isSwipeGesture = false;
     });
     
-    // End call
+    // Get current user and close call with Firebase update
+    final authState = ref.read(authProvider);
     final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
-    callNotifier.endCall();
+    
+    if (authState.currentUser != null) {
+      // Close call and update Firebase status to 'close_call'
+      await callNotifier.closeCall(
+        callerId: authState.currentUser!.id,
+        receiverId: widget.friend.id,
+      );
+    } else {
+      // Fallback to regular end call if no auth state
+      callNotifier.endCall();
+    }
 
     // Reset the swipe animation
     _swipeController.reset();
 
-    context.go('/home');
+    // Navigation to home will be handled by the call state listener
   }
 
   @override
   Widget build(BuildContext context) {
     // Listen to call state changes
     ref.listen<CallState>(simpleCallNotifierProvider, (previous, next) {
+      print('📞 Call state changed: ${previous?.status} -> ${next.status}');
+      
       if (next.status == CallStatus.connected) {
         setState(() {
           // Update UI to show connection is established
         });
+      } else if (next.status == CallStatus.ended) {
+        // Navigate to home when call ends (either by user action or remote close)
+        print('📞 Call ended - navigating to home');
+        context.go('/home');
       }
-      // Don't automatically navigate to home when call ends
-      // User must explicitly close the call via back button or close button
     });
 
     // Handshake changes are now handled within the SimpleCallNotifier
