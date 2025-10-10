@@ -1,6 +1,5 @@
 import 'package:go_router/go_router.dart';
 import '../../presentation/features/home/ui/home_screen.dart';
-import '../../presentation/features/firebase_test/ui/firebase_test_page.dart';
 import '../../presentation/features/login/ui/login_screen.dart';
 import '../../presentation/features/signup/ui/signup_screen.dart';
 import '../../presentation/features/splash/ui/splash_screen.dart';
@@ -29,11 +28,6 @@ final appRouter = GoRouter(
       path: '/home',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
-    ),
-    GoRoute(
-      path: '/firebase-test',
-      name: 'firebase-test',
-      builder: (context, state) => const FirebaseTestPage(),
     ),
     GoRoute(
       path: '/call/:friendId',

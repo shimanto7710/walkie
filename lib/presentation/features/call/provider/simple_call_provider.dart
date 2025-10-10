@@ -38,13 +38,11 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
   }
 
   void endCall() {
-    print('📞 endCall() called - updating state to ended');
     state = state.copyWith(
       status: CallStatus.ended,
       isConnecting: false,
       isConnected: false,
     );
-    print('📞 Call state updated to: ${state.status}');
   }
 
   /// Close call and update Firebase status
@@ -53,28 +51,21 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
     required String receiverId,
   }) async {
     try {
-      print('📞 closeCall() called - updating Firebase to close_call');
-      print('📞 Caller: $callerId, Receiver: $receiverId');
-      
       // Update Firebase status to 'close_call' using shared utility
       await _handshakeOperations?.updateHandshakeStatus(
         callerId: callerId,
         receiverId: receiverId,
         status: 'close_call',
       );
-      
+
       // Update local state
       state = state.copyWith(
         status: CallStatus.ended,
         isConnecting: false,
         isConnected: false,
       );
-      
-      print('✅ Call closed and Firebase status updated to close_call');
-      print('📞 Local call state updated to: ${state.status}');
+
     } catch (e) {
-      print('❌ Error closing call: $e');
-      // Still update local state even if Firebase fails
       state = state.copyWith(
         status: CallStatus.ended,
         isConnecting: false,
@@ -99,10 +90,10 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
         callerId: callerId,
         receiverId: receiverId,
       );
-      
+
       // Start listening to handshake changes
       _startListening(callerId: callerId, receiverId: receiverId);
-      
+
       print('✅ Firebase handshake initialized');
     } catch (e) {
       print('❌ Error initiating handshake: $e');
@@ -124,55 +115,32 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
     required String receiverId,
   }) {
     _handshakeSubscription?.cancel();
-    
+
     // Store current call participants
     _currentCallerId = callerId;
     _currentReceiverId = receiverId;
-    
+
     _handshakeSubscription = _handshakeService
         ?.listenToHandshake(
-          callerId: callerId,
-          receiverId: receiverId,
-        )
+      callerId: callerId,
+      receiverId: receiverId,
+    )
         ?.listen(
-          (handshake) {
-            print('📡 Handshake status changed: ${handshake.status}');
-            print('📡 Handshake details: caller=${handshake.callerId}, receiver=${handshake.receiverId}');
-            
-            // Handle close_call status
-            if (handshake.status == 'close_call') {
-              print('📞 Close call detected - ending call for both parties');
-              endCall();
-            }
-          },
-          onError: (error) {
-            print('❌ Handshake stream error: $error');
-          },
-        );
-  }
+      (handshake) {
+        print('📡 Handshake status changed: ${handshake.status}');
+        print(
+            '📡 Handshake details: caller=${handshake.callerId}, receiver=${handshake.receiverId}');
 
-  /// Update handshake status
-  Future<void> updateHandshakeStatus(String status) async {
-    try {
-      // You'll need to store callerId and receiverId in the state or pass them
-      // For now, this is a placeholder - you can modify based on your needs
-      print('📡 Updating handshake status to: $status');
-    } catch (e) {
-      print('❌ Error updating handshake status: $e');
-      rethrow;
-    }
-  }
-
-  /// Complete handshake
-  Future<void> completeHandshake() async {
-    try {
-      // You'll need to store callerId and receiverId in the state or pass them
-      // For now, this is a placeholder - you can modify based on your needs
-      print('📡 Completing handshake');
-    } catch (e) {
-      print('❌ Error completing handshake: $e');
-      rethrow;
-    }
+        // Handle close_call status
+        if (handshake.status == 'close_call') {
+          print('📞 Close call detected - ending call for both parties');
+          endCall();
+        }
+      },
+      onError: (error) {
+        print('❌ Handshake stream error: $error');
+      },
+    );
   }
 
   /// Dispose resources
