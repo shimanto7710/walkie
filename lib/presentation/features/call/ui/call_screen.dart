@@ -265,8 +265,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                print('🔙 Back button pressed - navigating to home');
-                context.go('/home');
+                print('🔙 Back button pressed - ending call');
+                _endCall();
               },
               borderRadius: BorderRadius.circular(20),
               child: Container(
