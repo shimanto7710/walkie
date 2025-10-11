@@ -23,8 +23,20 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
     _handshakeService = FirebaseHandshakeService();
     _handshakeOperations = HandshakeOperations();
     _webrtcService = MinimalFlutterWebRTCService();
-    _webrtcService!.initialize();
+    // Initialize WebRTC service asynchronously
+    _initializeWebRTCService();
     return const CallState();
+  }
+
+  /// Initialize WebRTC service
+  Future<void> _initializeWebRTCService() async {
+    if (_webrtcService != null) {
+      final result = await _webrtcService!.initialize();
+      result.fold(
+        (failure) => print('❌ Failed to initialize WebRTC service: ${failure.message}'),
+        (_) => print('✅ WebRTC service initialized successfully'),
+      );
+    }
   }
 
   void startCall() {
@@ -153,6 +165,9 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
         if (handshake.status == 'close_call') {
           print('📞 Close call detected - ending call for both parties');
           endCall();
+        } else if (handshake.status == "call_acknowledge") {
+          print('📞 Call acknowledge received - setting up WebRTC connection');
+          _handleCallAcknowledge(handshake);
         }
       },
       onError: (error) {
@@ -190,6 +205,97 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
 
 
     return iceCandidates;
+  }
+
+  /// Handle call acknowledge - set remote SDP and add ICE candidates
+  Future<void> _handleCallAcknowledge(Handshake handshake) async {
+    try {
+      if (_webrtcService == null) {
+        print('❌ WebRTC service not initialized');
+        return;
+      }
+
+      // Ensure WebRTC service is properly initialized
+      final initResult = await _webrtcService!.initialize();
+      initResult.fold(
+        (failure) {
+          print('❌ Failed to initialize WebRTC service: ${failure.message}');
+          return;
+        },
+        (_) {
+          print('✅ WebRTC service ready for call acknowledge');
+          return;
+        },
+      );
+
+      // Set remote description with receiver's SDP answer
+      if (handshake.sdpAnswer != null) {
+        print('📞 Setting remote description with receiver SDP answer');
+        final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, 'answer');
+        final setRemoteResult = await _webrtcService!.setRemoteDescription(remoteDescription);
+        
+        setRemoteResult.fold(
+          (failure) {
+            print('❌ Failed to set remote description: ${failure.message}');
+            return;
+          },
+          (_) {
+            print('✅ Remote description set successfully');
+            return;
+          },
+        );
+      } else {
+        print('❌ No SDP answer received from receiver');
+        return;
+      }
+
+      // Add receiver's ICE candidates
+      if (handshake.iceCandidatesFromReceiver != null && handshake.iceCandidatesFromReceiver!.isNotEmpty) {
+        print('🧊 Adding ${handshake.iceCandidatesFromReceiver!.length} ICE candidates from receiver');
+        
+        for (final iceData in handshake.iceCandidatesFromReceiver!) {
+          try {
+            final candidate = RTCIceCandidate(
+              iceData['candidate'] ?? '',
+              iceData['sdpMid'] ?? '0',
+              iceData['sdpMLineIndex'] ?? 0,
+            );
+            
+            final addCandidateResult = await _webrtcService!.addIceCandidate(candidate);
+            addCandidateResult.fold(
+              (failure) {
+                print('❌ Failed to add ICE candidate: ${failure.message}');
+              },
+              (_) {
+                print('✅ ICE candidate added successfully');
+              },
+            );
+          } catch (e) {
+            print('❌ Error processing ICE candidate: $e');
+          }
+        }
+      } else {
+        print('⚠️ No ICE candidates received from receiver');
+      }
+
+      // Update call state to connected
+      state = state.copyWith(
+        status: CallStatus.connected,
+        isConnecting: false,
+        isConnected: true,
+      );
+
+      print('✅ WebRTC connection established successfully');
+
+    } catch (e) {
+      print('❌ Error handling call acknowledge: $e');
+      state = state.copyWith(
+        status: CallStatus.failed,
+        isConnecting: false,
+        isConnected: false,
+        errorMessage: 'Failed to establish connection: $e',
+      );
+    }
   }
 
   /// Dispose resources
