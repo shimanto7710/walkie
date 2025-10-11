@@ -110,10 +110,7 @@ class _WebRTCCallScreenState extends ConsumerState<WebRTCCallScreen>
         controller.setLocalUserId(authState.currentUser!.id);
       }
 
-      if (widget.isIncomingCall) {
-        // For incoming calls, start listening for call state changes
-        _listenToCallState();
-      }
+      // Note: ref.listen calls are now handled in the build method
 
     } catch (e) {
       print('❌ Error initializing WebRTC: $e');
@@ -121,19 +118,6 @@ class _WebRTCCallScreenState extends ConsumerState<WebRTCCallScreen>
     }
   }
 
-  void _listenToCallState() {
-    ref.listen(webrtcCallStateProvider, (previous, next) {
-      if (next.status == CallStatus.connected) {
-        setState(() {
-          _isCallSustained = true;
-        });
-      } else if (next.status == CallStatus.ended) {
-        context.go('/home');
-      } else if (next.status == CallStatus.failed) {
-        _showErrorDialog(next.errorMessage ?? 'Call failed');
-      }
-    });
-  }
 
   void _showPermissionDialog(String message) {
     showDialog(
@@ -253,6 +237,19 @@ class _WebRTCCallScreenState extends ConsumerState<WebRTCCallScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Listen to WebRTC call state changes
+    ref.listen<CallState>(webrtcCallStateProvider, (previous, next) {
+      if (next.status == CallStatus.connected) {
+        setState(() {
+          _isCallSustained = true;
+        });
+      } else if (next.status == CallStatus.ended) {
+        context.go('/home');
+      } else if (next.status == CallStatus.failed) {
+        _showErrorDialog(next.errorMessage ?? 'Call failed');
+      }
+    });
+
     final callState = ref.watch(webrtcCallStateProvider);
     
     return Scaffold(

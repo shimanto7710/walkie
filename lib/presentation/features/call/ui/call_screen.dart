@@ -116,10 +116,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
 
       _initializeHandshake();
 
-      if (widget.isIncomingCall) {
-        // For incoming calls, start listening for call state changes
-        _listenToCallState();
-      }
+      // Note: ref.listen calls are now handled in the build method
 
     } catch (e) {
       print('❌ Error initializing WebRTC: $e');
@@ -127,19 +124,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
     }
   }
 
-  void _listenToCallState() {
-    ref.listen(webrtcCallStateProvider, (previous, next) {
-      if (next.status == CallStatus.connected) {
-        setState(() {
-          _isCallSustained = true;
-        });
-      } else if (next.status == CallStatus.ended) {
-        context.go('/home');
-      } else if (next.status == CallStatus.failed) {
-        _showErrorDialog(next.errorMessage ?? 'Call failed');
-      }
-    });
-  }
 
   void _showPermissionDialog(String message) {
     showDialog(
@@ -343,7 +327,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Listen to call state changes
+    // Listen to simple call state changes
     ref.listen<CallState>(simpleCallNotifierProvider, (previous, next) {
       print('📞 Call state changed: ${previous?.status} -> ${next.status}');
       
@@ -355,6 +339,19 @@ class _CallScreenState extends ConsumerState<CallScreen>
         // Navigate to home when call ends (either by user action or remote close)
         print('📞 Call ended - navigating to home');
         context.go('/home');
+      }
+    });
+
+    // Listen to WebRTC call state changes
+    ref.listen<CallState>(webrtcCallStateProvider, (previous, next) {
+      if (next.status == CallStatus.connected) {
+        setState(() {
+          _isCallSustained = true;
+        });
+      } else if (next.status == CallStatus.ended) {
+        context.go('/home');
+      } else if (next.status == CallStatus.failed) {
+        _showErrorDialog(next.errorMessage ?? 'Call failed');
       }
     });
 
