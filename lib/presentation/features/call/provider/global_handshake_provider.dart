@@ -24,34 +24,6 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
     return null;
   }
 
-  /// Start listening to a specific handshake from anywhere in the app
-  void startListeningToHandshake({
-    required String callerId,
-    required String receiverId,
-  }) {
-    final handshakeId = _generateHandshakeId(callerId, receiverId);
-    
-    // Only start listening if it's a different handshake
-    if (_currentHandshakeId != handshakeId) {
-      _stopListening();
-      _currentHandshakeId = handshakeId;
-      
-    _handshakeSubscription = _handshakeService!
-        .listenToHandshake(
-          callerId: callerId,
-          receiverId: receiverId,
-        )
-        .listen(
-            (handshake) {
-              print('🌍 Global handshake update: ${handshake.status}');
-              state = handshake;
-            },
-            onError: (error) {
-              print('❌ Global handshake stream error: $error');
-            },
-          );
-    }
-  }
 
   /// Listen to handshake changes for a specific user (as caller or receiver)
   void listenForUserHandshakes(String userId) {
@@ -185,12 +157,6 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
     _stopListening();
     _currentHandshakeId = null;
     state = null;
-  }
-
-  /// Generate consistent handshake ID
-  String _generateHandshakeId(String callerId, String receiverId) {
-    final sortedIds = [callerId, receiverId]..sort();
-    return '${sortedIds[0]}_${sortedIds[1]}';
   }
 
   /// Dispose resources
