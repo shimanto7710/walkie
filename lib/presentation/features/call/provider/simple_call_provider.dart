@@ -22,7 +22,7 @@ class SimpleCallNotifier extends _$SimpleCallNotifier {
   CallState build() {
     _handshakeService = FirebaseHandshakeService();
     _handshakeOperations = HandshakeOperations();
-    _webrtcService = MinimalFlutterWebRTCService();
+    _webrtcService = MinimalFlutterWebRTCService.instance;
     // Initialize WebRTC service asynchronously
     _initializeWebRTCService();
     return const CallState();

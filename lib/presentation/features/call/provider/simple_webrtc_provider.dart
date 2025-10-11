@@ -9,7 +9,7 @@ final webrtcCallStateProvider = StateNotifierProvider<WebRTCCallNotifier, CallSt
 });
 
 class WebRTCCallNotifier extends StateNotifier<CallState> {
-  final MinimalWebRTCService _webrtcService = MinimalFlutterWebRTCService();
+  final MinimalWebRTCService _webrtcService = MinimalFlutterWebRTCService.instance;
 
   WebRTCCallNotifier() : super(const CallState()) {
     _initializeWebRTC();

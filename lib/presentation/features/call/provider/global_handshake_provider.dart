@@ -20,7 +20,7 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
   Handshake? build() {
     _handshakeService = FirebaseHandshakeService();
     _handshakeOperations = HandshakeOperations();
-    _webrtcService = MinimalFlutterWebRTCService();
+    _webrtcService = MinimalFlutterWebRTCService.instance;
     return null;
   }
 

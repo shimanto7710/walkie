@@ -33,6 +33,24 @@ abstract class MinimalWebRTCService {
 }
 
 class MinimalFlutterWebRTCService implements MinimalWebRTCService {
+  // Singleton instance
+  static MinimalFlutterWebRTCService? _instance;
+  
+  // Private constructor
+  MinimalFlutterWebRTCService._internal();
+  
+  // Factory constructor that returns the singleton instance
+  factory MinimalFlutterWebRTCService() {
+    _instance ??= MinimalFlutterWebRTCService._internal();
+    return _instance!;
+  }
+  
+  // Static method to get the instance
+  static MinimalFlutterWebRTCService get instance {
+    _instance ??= MinimalFlutterWebRTCService._internal();
+    return _instance!;
+  }
+  
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
   MediaStream? _remoteStream;
@@ -405,6 +423,15 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
     _remoteStream?.dispose();
     _connectionStateController.close();
     _iceCandidateController.close();
+    
+    // Reset singleton instance
+    _instance = null;
+  }
+  
+  // Static method to dispose the singleton
+  static void disposeInstance() {
+    _instance?.dispose();
+    _instance = null;
   }
 }
 
