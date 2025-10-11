@@ -497,18 +497,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           
           if (data is Map<dynamic, dynamic>) {
             for (final entry in data.entries) {
-              final handshakeData = Map<String, dynamic>.from(entry.value as Map<dynamic, dynamic>);
-              print('🔥 Firebase test - Handshake: ${entry.key} -> $handshakeData');
-              
-              // Check if this handshake involves the current user
-              if (handshakeData['receiverId'] == currentUserId) {
-                print('🔥 Firebase test - Found handshake for current user: $currentUserId');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('🎯 Found handshake for you from: ${handshakeData['callerId']}'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+              if (entry.value is Map) {
+                final handshakeData = Map<String, dynamic>.from(entry.value as Map);
+                print('🔥 Firebase test - Handshake: ${entry.key} -> $handshakeData');
+                
+                // Check if this handshake involves the current user
+                if (handshakeData['receiverId'] == currentUserId) {
+                  print('🔥 Firebase test - Found handshake for current user: $currentUserId');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('🎯 Found handshake for you from: ${handshakeData['callerId']}'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
               }
             }
           }

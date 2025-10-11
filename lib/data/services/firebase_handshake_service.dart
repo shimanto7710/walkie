@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../domain/entities/handshake.dart';
 
 class FirebaseHandshakeService {
@@ -13,6 +14,8 @@ class FirebaseHandshakeService {
   Future<void> initiateHandshake({
     required String callerId,
     required String receiverId,
+    RTCSessionDescription? sdpOffer,
+    List<RTCIceCandidate>? iceCandidates,
   }) async {
     try {
       final handshakeId = _generateHandshakeId(callerId, receiverId);
@@ -24,6 +27,13 @@ class FirebaseHandshakeService {
         status: 'call_initiate',
         timestamp: DateTime.now().millisecondsSinceEpoch,
         lastUpdated: DateTime.now().millisecondsSinceEpoch,
+        sdpOffer: sdpOffer?.sdp,
+        iceCandidates: iceCandidates?.map((c) => {
+          'type': 'candidate',
+          'candidate': c.candidate,
+          'sdpMid': c.sdpMid ?? '0',
+          'sdpMLineIndex': c.sdpMLineIndex ?? 0,
+        }).toList(),
       );
 
       await _database
@@ -40,7 +50,7 @@ class FirebaseHandshakeService {
   /// Listen to handshake data changes
   Stream<Handshake> listenToHandshake({
     required String callerId,
-    required String receiverId,
+    required String receiverId
   }) {
     final handshakeId = _generateHandshakeId(callerId, receiverId);
     
@@ -51,11 +61,13 @@ class FirebaseHandshakeService {
         .onValue
         .listen((DatabaseEvent event) {
       if (event.snapshot.exists) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>;
-        final handshake = Handshake.fromMap(Map<String, dynamic>.from(data));
-        
-        print('📡 Handshake data received: ${handshake.status}');
-        _handshakeController?.add(handshake);
+        final data = event.snapshot.value;
+        if (data is Map) {
+          final handshake = Handshake.fromMap(Map<String, dynamic>.from(data));
+          
+          print('📡 Handshake data received: ${handshake.status}');
+          _handshakeController?.add(handshake);
+        }
       } else {
         print('📡 Handshake data not found');
       }
@@ -76,13 +88,27 @@ class FirebaseHandshakeService {
         .onChildChanged
         .listen((DatabaseEvent event) {
       if (event.snapshot.exists) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>;
-        final handshake = Handshake.fromMap(Map<String, dynamic>.from(data));
-        
-        // Only emit if this handshake involves the user
-        if (handshake.callerId == userId || handshake.receiverId == userId) {
-          print('📡 User handshake data received: ${handshake.status}');
-          _handshakeController?.add(handshake);
+        final data = event.snapshot.value;
+        if (data is Map) {
+          try{
+            print('🔍 Raw Firebase data: $data');
+            final handshake = Handshake.fromMap(Map<String, dynamic>.from(data));
+            print('✅ Parsed handshake: callerId=${handshake.callerId}, receiverId=${handshake.receiverId}, status=${handshake.status}');
+            print('🔍 SDP Offer: ${handshake.sdpOffer != null ? "Present (${handshake.sdpOffer!.length} chars)" : "Missing"}');
+            print('🔍 ICE Candidates: ${handshake.iceCandidates?.length ?? 0} candidates');
+            print('🔍 SDP Answer: ${handshake.sdpAnswer != null ? "Present (${handshake.sdpAnswer!.length} chars)" : "Missing"}');
+            print('🔍 ICE Candidates from Receiver: ${handshake.iceCandidatesFromReceiver?.length ?? 0} candidates');
+
+            // Only emit if this handshake involves the user
+            if (handshake.callerId == userId || handshake.receiverId == userId) {
+              print('📡 User handshake data received: ${handshake.status}');
+              _handshakeController?.add(handshake);
+            }
+          }catch(e){
+            print('❌ Error parsing handshake data for user $userId: $e');
+            print('🔍 Problematic data: $data');
+          }
+
         }
       }
     }, onError: (error) {

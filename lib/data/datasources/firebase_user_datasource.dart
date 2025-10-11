@@ -30,8 +30,9 @@ class FirebaseUserDataSource {
     try {
       return _database.ref('users').onValue.map((event) {
         if (event.snapshot.exists) {
-          final data = event.snapshot.value as Map<dynamic, dynamic>;
-          return data.entries
+          final data = event.snapshot.value;
+          if (data is Map) {
+            return data.entries
               .map((entry) => User.fromJson({
                     'id': entry.key,
                     'name': entry.value['name'] ?? '',
@@ -42,6 +43,7 @@ class FirebaseUserDataSource {
                     'friends': _convertFriendsData(entry.value['friends']),
                   }))
               .toList();
+          }
         }
         return <User>[];
       });
@@ -62,8 +64,9 @@ class FirebaseUserDataSource {
       );
       
       if (snapshot.exists) {
-        final data = snapshot.value as Map<dynamic, dynamic>;
-        print("🔍 Data keys: ${data.keys.toList()}");
+        final data = snapshot.value;
+        if (data is Map) {
+          print("🔍 Data keys: ${data.keys.toList()}");
         
         final users = data.entries
             .map((entry) => User.fromJson({
@@ -78,6 +81,7 @@ class FirebaseUserDataSource {
             .toList();
 
         return users;
+        }
       }
       return [];
     } catch (e) {
@@ -126,8 +130,9 @@ class FirebaseUserDataSource {
         return [];
       }
       
-      final allUsersData = allUsersSnapshot.value as Map<dynamic, dynamic>;
-      final friends = <User>[];
+      final allUsersData = allUsersSnapshot.value;
+      if (allUsersData is Map) {
+        final friends = <User>[];
       
       // Filter only the friends
       for (final friendId in friendsData.keys) {
@@ -151,6 +156,8 @@ class FirebaseUserDataSource {
       
       print('📱 Total friends found: ${friends.length}');
       return friends;
+      }
+      return [];
     } catch (e) {
       print('❌ Error getting friends: $e');
       throw ServerException('Failed to get friends: $e');
@@ -182,8 +189,9 @@ class FirebaseUserDataSource {
         }
         
         // Get all users data
-        final allUsersData = event.snapshot.value as Map<dynamic, dynamic>;
-        final friends = <User>[];
+        final allUsersData = event.snapshot.value;
+        if (allUsersData is Map) {
+          final friends = <User>[];
         
         // Filter only the friends
         for (final friendId in friendsData.keys) {
@@ -203,6 +211,8 @@ class FirebaseUserDataSource {
         }
         
         return friends;
+        }
+        return <User>[];
       }).asyncMap((future) => future);
     } catch (e) {
       throw ServerException('Failed to watch friends: $e');

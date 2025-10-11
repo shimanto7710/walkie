@@ -7,7 +7,7 @@ part of 'simple_call_provider.dart';
 // **************************************************************************
 
 String _$simpleCallNotifierHash() =>
-    r'17cd2d988c73fd99e861730d30e2bb007b9918d0';
+    r'6c997e7b725402255801eaca5cf3400a658affcf';
 
 /// See also [SimpleCallNotifier].
 @ProviderFor(SimpleCallNotifier)

@@ -1,5 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
-import '../../domain/entities/handshake.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 /// Utility class for common handshake operations
 /// This helps eliminate code duplication between providers
@@ -13,6 +13,8 @@ class HandshakeOperations {
     required String receiverId,
     required String status,
     required bool receiverIdSent,
+    RTCSessionDescription? answerSdp,
+    List<RTCIceCandidate>? receiverIceCandidates,
   }) async {
     try {
       final handshakeId = _generateHandshakeId(callerId, receiverId);
@@ -21,6 +23,21 @@ class HandshakeOperations {
         'receiverIdSent': receiverIdSent,
         'lastUpdated': DateTime.now().millisecondsSinceEpoch,
       };
+      
+      // Add receiver's answer SDP if provided
+      if (answerSdp != null && answerSdp.sdp != null) {
+        updates['sdpAnswerFromReceiver'] = answerSdp.sdp!;
+      }
+      
+      // Add receiver's ICE candidates if provided
+      if (receiverIceCandidates != null && receiverIceCandidates.isNotEmpty) {
+        updates['iceCandidatesFromReceiver'] = receiverIceCandidates.map((c) => {
+          'type': 'candidate',
+          'candidate': c.candidate,
+          'sdpMid': c.sdpMid ?? '0',
+          'sdpMLineIndex': c.sdpMLineIndex ?? 0,
+        }).toList();
+      }
       
       print('🔄 Updating handshake $handshakeId: status=$status, receiverIdSent=$receiverIdSent');
       

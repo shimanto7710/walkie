@@ -17,6 +17,7 @@ Future<void> configureDependencies() async {
   // Initialize injectable dependencies
   getIt.init();
   
+  
   // Register repository interfaces
   getIt.registerLazySingleton<UserRepository>(() => getIt<UserRepositoryImpl>());
   getIt.registerLazySingleton<AuthRepository>(() => getIt<AuthRepositoryImpl>());

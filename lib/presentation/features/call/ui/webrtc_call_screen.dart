@@ -1,23 +1,19 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/utils/permissions_helper.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
-import '../provider/simple_call_provider.dart';
-import '../../login/provider/auth_provider.dart';
+import '../../../../core/utils/permissions_helper.dart';
 import '../provider/simple_webrtc_provider.dart';
+import '../../login/provider/auth_provider.dart';
 
-/*final webrtcCallStateProvider = StateNotifierProvider<WebRTCCallNotifier, CallState>((ref) {
-  return WebRTCCallNotifier();
-});*/
-
-class CallScreen extends ConsumerStatefulWidget {
+class WebRTCCallScreen extends ConsumerStatefulWidget {
   final User friend;
   final bool isIncomingCall;
   final String? handshakeId;
   
-  const CallScreen({
+  const WebRTCCallScreen({
     super.key,
     required this.friend,
     this.isIncomingCall = false,
@@ -25,10 +21,10 @@ class CallScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CallScreen> createState() => _CallScreenState();
+  ConsumerState<WebRTCCallScreen> createState() => _WebRTCCallScreenState();
 }
 
-class _CallScreenState extends ConsumerState<CallScreen>
+class _WebRTCCallScreenState extends ConsumerState<WebRTCCallScreen>
     with TickerProviderStateMixin {
   bool _isHolding = false;
   bool _isCallSustained = false;
@@ -44,6 +40,11 @@ class _CallScreenState extends ConsumerState<CallScreen>
   void initState() {
     super.initState();
     
+    _setupAnimations();
+    _initializeWebRTC();
+  }
+
+  void _setupAnimations() {
     // Pulse animation for the call button
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1000),
@@ -77,7 +78,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
     );
     _swipeAnimation = Tween<Offset>(
       begin: Offset.zero,
-      end: const Offset(0, -0.3), // Move up by 30% of button height
+      end: const Offset(0, -0.3),
     ).animate(CurvedAnimation(
       parent: _swipeController,
       curve: Curves.easeOutBack,
@@ -88,11 +89,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
     
     // Initialize WebRTC and permissions
     _initializeWebRTC();
-    
-    // Initialize Firebase handshake when entering call
-    // _initializeHandshake();
-
-    // No initialization needed for simple call UI
   }
 
   Future<void> _initializeWebRTC() async {
@@ -113,8 +109,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
       if (authState.currentUser != null) {
         controller.setLocalUserId(authState.currentUser!.id);
       }
-
-      _initializeHandshake();
 
       if (widget.isIncomingCall) {
         // For incoming calls, start listening for call state changes
@@ -183,132 +177,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
     );
   }
 
-  void _initializeHandshake() async {
-    try {
-      final authState = ref.read(authProvider);
-      if (authState.currentUser != null) {
-        final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
-        
-        if (widget.isIncomingCall) {
-          print('📞 Incoming call detected - starting to listen for handshake changes');
-          print('📞 Handshake ID: ${widget.handshakeId}');
-          
-          // For incoming calls, just start listening without initializing
-          // Extract caller and receiver from handshakeId or use friend.id as caller
-          final callerId = widget.friend.id; // The friend is the caller in incoming calls
-          final receiverId = authState.currentUser!.id; // Current user is the receiver
-          
-          // Start listening to handshake changes for incoming calls
-          callNotifier.startListeningToHandshake(
-            callerId: callerId,
-            receiverId: receiverId,
-          );
-          
-        } else {
-          // For outgoing calls, initialize handshake and start listening
-          await callNotifier.initiateHandshake(
-            callerId: authState.currentUser!.id,
-            receiverId: widget.friend.id,
-          );
-          
-          print('✅ Firebase handshake initialized for outgoing call');
-        }
-      }
-    } catch (e) {
-      print('❌ Error initializing handshake: $e');
-    }
-  }
-
-  void _startCall() {
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
-    callNotifier.startCall();
-  }
-
-  void _acceptCall() {
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
-    callNotifier.acceptCall();
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _waveController.dispose();
-    _swipeController.dispose();
-    
-    // Reset call state
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
-    callNotifier.reset();
-
-    // Reset WebRTC state
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    controller.reset();
-    
-    super.dispose();
-  }
-
-  void _onHoldStart() {
-    setState(() {
-      _isHolding = true;
-    });
-    
-    // Mic button ONLY toggles talking - NO call management
-    // Just start talking, don't interact with call state at all
-  }
-
-  void _onHoldEnd() {
-    // Mic button should ALWAYS work as push-to-talk toggle
-    // Never ends the call, regardless of call state (sustained or not)
-    if (!_isSwipeGesture) {
-      setState(() {
-        _isHolding = false;
-      });
-      
-      // Mic button should NEVER end the call
-      // Just stop talking - call stays active regardless of status
-    }
-  }
-
-  void _onSwipeUp() {
-    setState(() {
-      _isCallSustained = true;
-      _isSwipeGesture = true;
-    });
-    
-    // Accept the call when swiping up
-    _acceptCall();
-    
-    // Trigger the swipe up animation
-    _swipeController.forward();
-  }
-
-  void _endCall() async {
-    setState(() {
-      _isHolding = false;
-      _isCallSustained = false;
-      _isSwipeGesture = false;
-    });
-    
-    // Get current user and close call with Firebase update
-    final authState = ref.read(authProvider);
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
-    
-    if (authState.currentUser != null) {
-      // Close call and update Firebase status to 'close_call'
-      await callNotifier.closeCall(
-        callerId: authState.currentUser!.id,
-        receiverId: widget.friend.id,
-      );
-    } else {
-      // Fallback to regular end call if no auth state
-      callNotifier.endCall();
-    }
-
-    // Reset the swipe animation
-    _swipeController.reset();
-
-    // Navigation to home will be handled by the call state listener
-  }
-
   void _startCallWebRTC() async {
     final controller = ref.read(webrtcCallStateProvider.notifier);
     await controller.startCall(widget.friend.id);
@@ -342,33 +210,58 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Listen to call state changes
-    ref.listen<CallState>(simpleCallNotifierProvider, (previous, next) {
-      print('📞 Call state changed: ${previous?.status} -> ${next.status}');
-      
-      if (next.status == CallStatus.connected) {
-        setState(() {
-          // Update UI to show connection is established
-        });
-      } else if (next.status == CallStatus.ended) {
-        // Navigate to home when call ends (either by user action or remote close)
-        print('📞 Call ended - navigating to home');
-        context.go('/home');
-      }
+  void dispose() {
+    _pulseController.dispose();
+    _waveController.dispose();
+    _swipeController.dispose();
+    
+    // Reset WebRTC state
+    final controller = ref.read(webrtcCallStateProvider.notifier);
+    controller.reset();
+    
+    super.dispose();
+  }
+
+  void _onHoldStart() {
+    setState(() {
+      _isHolding = true;
     });
+  }
 
-    // Handshake changes are now handled within the SimpleCallNotifier
+  void _onHoldEnd() {
+    if (!_isSwipeGesture) {
+      setState(() {
+        _isHolding = false;
+      });
+    }
+  }
 
-    final callState = ref.watch(simpleCallNotifierProvider);
+  void _onSwipeUp() {
+    setState(() {
+      _isCallSustained = true;
+      _isSwipeGesture = true;
+    });
+    
+    if (widget.isIncomingCall) {
+      _acceptCall();
+    } else {
+      _startCall();
+    }
+    
+    _swipeController.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final callState = ref.watch(webrtcCallStateProvider);
     
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
-            // Header with friend info and end call button
-            _buildHeader(),
+            // Header with friend info and controls
+            _buildHeader(callState),
             
             // Main content area
             Expanded(
@@ -386,7 +279,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(CallState callState) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -396,8 +289,11 @@ class _CallScreenState extends ConsumerState<CallScreen>
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                print('🔙 Back button pressed - ending call');
-                _endCall();
+                if (callState.status == CallStatus.connected) {
+                  _endCall();
+                } else {
+                  _rejectCall();
+                }
               },
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -425,17 +321,9 @@ class _CallScreenState extends ConsumerState<CallScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _isCallSustained 
-                    ? 'Call Active' 
-                    : _isHolding 
-                      ? 'Talking...' 
-                      : 'Ready to Call',
+                  _getStatusText(callState),
                   style: TextStyle(
-                    color: _isCallSustained 
-                      ? Colors.green 
-                      : _isHolding 
-                        ? Colors.orange 
-                        : Colors.grey[400],
+                    color: _getStatusColor(callState),
                     fontSize: 16,
                   ),
                 ),
@@ -443,19 +331,60 @@ class _CallScreenState extends ConsumerState<CallScreen>
             ),
           ),
           
-          // End call button (only visible when call is sustained)
-          if (_isCallSustained)
-            IconButton(
-              onPressed: _endCall,
-              icon: const Icon(
-                Icons.call_end,
-                color: Colors.red,
-                size: 28,
-              ),
+          // Mute button
+          IconButton(
+            onPressed: _toggleMute,
+            icon: Icon(
+              callState.isMuted ? Icons.mic_off : Icons.mic,
+              color: callState.isMuted ? Colors.red : Colors.white,
+              size: 28,
             ),
+          ),
+          
+          // Speaker button
+          IconButton(
+            onPressed: _toggleSpeaker,
+            icon: Icon(
+              callState.isSpeakerOn ? Icons.volume_up : Icons.volume_down,
+              color: callState.isSpeakerOn ? Colors.green : Colors.white,
+              size: 28,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  String _getStatusText(CallState callState) {
+    if (callState.status == CallStatus.connected) {
+      return 'Call Active';
+    } else if (callState.isConnecting) {
+      return 'Connecting...';
+    } else if (callState.status == CallStatus.calling) {
+      return 'Calling...';
+    } else if (callState.status == CallStatus.ringing) {
+      return 'Ringing...';
+    } else if (_isCallSustained) {
+      return 'Call Active';
+    } else if (_isHolding) {
+      return 'Talking...';
+    } else {
+      return 'Ready to Call';
+    }
+  }
+
+  Color _getStatusColor(CallState callState) {
+    if (callState.status == CallStatus.connected || _isCallSustained) {
+      return Colors.green;
+    } else if (callState.isConnecting || callState.status == CallStatus.calling) {
+      return Colors.orange;
+    } else if (callState.status == CallStatus.ringing) {
+      return Colors.purple;
+    } else if (_isHolding) {
+      return Colors.orange;
+    } else {
+      return Colors.grey[400]!;
+    }
   }
 
   Widget _buildMainContent(CallState callState) {
@@ -464,7 +393,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Friend avatar with status
-          _buildFriendAvatar(),
+          _buildFriendAvatar(callState),
           
           const SizedBox(height: 40),
           
@@ -474,17 +403,17 @@ class _CallScreenState extends ConsumerState<CallScreen>
           const SizedBox(height: 60),
           
           // Instructions
-          _buildInstructions(),
+          _buildInstructions(callState),
         ],
       ),
     );
   }
 
-  Widget _buildFriendAvatar() {
+  Widget _buildFriendAvatar(CallState callState) {
     return Stack(
       children: [
         // Animated background waves
-        if (_isHolding || _isCallSustained)
+        if (_isHolding || _isCallSustained || callState.status == CallStatus.connected)
           AnimatedBuilder(
             animation: _waveAnimation,
             builder: (context, child) {
@@ -530,44 +459,18 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   Widget _buildCallStatus(CallState callState) {
-    String statusText;
-    Color statusColor;
-    
-    if (callState.status == CallStatus.connected) {
-      statusText = 'Call Connected';
-      statusColor = Colors.green;
-    } else if (callState.isConnecting) {
-      statusText = 'Connecting...';
-      statusColor = Colors.orange;
-    } else if (callState.status == CallStatus.calling) {
-      statusText = 'Calling...';
-      statusColor = Colors.blue;
-    } else if (callState.status == CallStatus.ringing) {
-      statusText = 'Ringing...';
-      statusColor = Colors.purple;
-    } else if (_isCallSustained) {
-      statusText = 'Call Active';
-      statusColor = Colors.green;
-    } else if (_isHolding) {
-      statusText = 'Talking...';
-      statusColor = Colors.orange;
-    } else {
-      statusText = 'Hold to Talk';
-      statusColor = Colors.grey[400]!;
-    }
-    
     return Text(
-      statusText,
+      _getStatusText(callState),
       style: TextStyle(
-        color: statusColor,
+        color: _getStatusColor(callState),
         fontSize: 20,
         fontWeight: FontWeight.w600,
       ),
     );
   }
 
-  Widget _buildInstructions() {
-    if (_isCallSustained) {
+  Widget _buildInstructions(CallState callState) {
+    if (callState.status == CallStatus.connected || _isCallSustained) {
       return const Text(
         'Call is active. Tap end call to disconnect.',
         style: TextStyle(
@@ -605,36 +508,20 @@ class _CallScreenState extends ConsumerState<CallScreen>
           // Hold to talk button
           Listener(
             onPointerDown: (_) {
-              print('🎤 onPointerDown detected - _isCallSustained: $_isCallSustained');
-              // Mic button should ALWAYS work as push-to-talk toggle
-              print('🎤 Hold started');
               _onHoldStart();
             },
             onPointerUp: (_) {
-              print('🎤 onPointerUp detected - _isCallSustained: $_isCallSustained, _isSwipeGesture: $_isSwipeGesture');
-              // Mic button should ALWAYS work as push-to-talk toggle
               if (!_isSwipeGesture) {
-                print('🎤 Hold ended');
                 _onHoldEnd();
-              } else {
-                print('🎤 onPointerUp ignored - swipe gesture in progress');
               }
             },
             onPointerCancel: (_) {
-              print('🎤 onPointerCancel detected - _isCallSustained: $_isCallSustained, _isSwipeGesture: $_isSwipeGesture');
-              // Mic button should ALWAYS work as push-to-talk toggle
               if (!_isSwipeGesture) {
-                print('🎤 Hold cancelled');
                 _onHoldEnd();
-              } else {
-                print('🎤 onPointerCancel ignored - swipe gesture in progress');
               }
             },
             onPointerMove: (details) {
-              print('🎤 onPointerMove - delta: ${details.delta.dy}, _isHolding: $_isHolding, _isCallSustained: $_isCallSustained');
-              // Check for swipe up gesture
               if (details.delta.dy < -10 && _isHolding && !_isCallSustained) {
-                print('⬆️ Swipe up detected - delta: ${details.delta.dy}');
                 _onSwipeUp();
               }
             },
@@ -643,7 +530,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
               builder: (context, child) {
                 return Transform.translate(
                   offset: _isCallSustained 
-                    ? Offset(0, _swipeAnimation.value.dy * 100) // 100 is button height
+                    ? Offset(0, _swipeAnimation.value.dy * 100)
                     : Offset.zero,
                   child: Transform.scale(
                     scale: _isHolding ? _pulseAnimation.value : 1.0,
@@ -652,12 +539,12 @@ class _CallScreenState extends ConsumerState<CallScreen>
                       height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: (_isHolding || _isCallSustained) 
+                        color: (_isHolding || _isCallSustained || callState.status == CallStatus.connected) 
                           ? Colors.green 
                           : Colors.red,
                         boxShadow: [
                           BoxShadow(
-                            color: ((_isHolding || _isCallSustained) 
+                            color: ((_isHolding || _isCallSustained || callState.status == CallStatus.connected) 
                               ? Colors.green 
                               : Colors.red).withOpacity(0.3),
                             blurRadius: 20,
@@ -688,20 +575,16 @@ class _CallScreenState extends ConsumerState<CallScreen>
                 height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _isHolding || _isCallSustained 
+                  color: _isHolding || _isCallSustained || callState.status == CallStatus.connected
                     ? Colors.green 
                     : Colors.grey,
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                _isCallSustained 
-                  ? 'Call Active' 
-                  : _isHolding 
-                    ? 'Talking' 
-                    : 'Ready',
+                _getStatusText(callState),
                 style: TextStyle(
-                  color: _isHolding || _isCallSustained 
+                  color: _isHolding || _isCallSustained || callState.status == CallStatus.connected
                     ? Colors.green 
                     : Colors.grey[400],
                   fontSize: 14,
@@ -715,3 +598,4 @@ class _CallScreenState extends ConsumerState<CallScreen>
     );
   }
 }
+*/

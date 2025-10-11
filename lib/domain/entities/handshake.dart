@@ -6,6 +6,10 @@ class Handshake {
   final String status;
   final int timestamp;
   final int lastUpdated;
+  final String? sdpOffer;
+  final List<Map<String, dynamic>>? iceCandidates;
+  final String? sdpAnswer;
+  final List<Map<String, dynamic>>? iceCandidatesFromReceiver;
 
   const Handshake({
     required this.callerId,
@@ -15,6 +19,10 @@ class Handshake {
     required this.status,
     required this.timestamp,
     required this.lastUpdated,
+    this.sdpOffer,
+    this.iceCandidates,
+    this.sdpAnswer,
+    this.iceCandidatesFromReceiver,
   });
 
   factory Handshake.fromMap(Map<String, dynamic> map) {
@@ -26,6 +34,40 @@ class Handshake {
       status: map['status'] ?? 'error',
       timestamp: map['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
       lastUpdated: map['lastUpdated'] ?? DateTime.now().millisecondsSinceEpoch,
+      sdpOffer: map['sdpOfferFromCaller'],
+      iceCandidates: map['iceCandidatesFromCaller'] != null ? 
+        (map['iceCandidatesFromCaller'] is List ? 
+          (map['iceCandidatesFromCaller'] as List).map((item) {
+            if (item is Map) {
+              return Map<String, dynamic>.from(item);
+            } else if (item is String) {
+              // Convert string candidate to proper format
+              return {
+                'type': 'candidate',
+                'candidate': item,
+                'sdpMid': '0',
+                'sdpMLineIndex': 0,
+              };
+            }
+            return <String, dynamic>{};
+          }).toList() : null) : null,
+      sdpAnswer: map['sdpAnswerFromReceiver'],
+      iceCandidatesFromReceiver: map['iceCandidatesFromReceiver'] != null ? 
+        (map['iceCandidatesFromReceiver'] is List ? 
+          (map['iceCandidatesFromReceiver'] as List).map((item) {
+            if (item is Map) {
+              return Map<String, dynamic>.from(item);
+            } else if (item is String) {
+              // Convert string candidate to proper format
+              return {
+                'type': 'candidate',
+                'candidate': item,
+                'sdpMid': '0',
+                'sdpMLineIndex': 0,
+              };
+            }
+            return <String, dynamic>{};
+          }).toList() : null) : null,
     );
   }
 
@@ -38,6 +80,10 @@ class Handshake {
       'status': status,
       'timestamp': timestamp,
       'lastUpdated': lastUpdated,
+      'sdpOfferFromCaller': sdpOffer,
+      'iceCandidatesFromCaller': iceCandidates,
+      'sdpAnswerFromReceiver': sdpAnswer,
+      'iceCandidatesFromReceiver': iceCandidatesFromReceiver,
     };
   }
 
@@ -49,6 +95,10 @@ class Handshake {
     String? status,
     int? timestamp,
     int? lastUpdated,
+    String? sdpOffer,
+    List<Map<String, dynamic>>? iceCandidates,
+    String? sdpAnswer,
+    List<Map<String, dynamic>>? iceCandidatesFromReceiver,
   }) {
     return Handshake(
       callerId: callerId ?? this.callerId,
@@ -58,12 +108,16 @@ class Handshake {
       status: status ?? this.status,
       timestamp: timestamp ?? this.timestamp,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      sdpOffer: sdpOffer ?? this.sdpOffer,
+      iceCandidates: iceCandidates ?? this.iceCandidates,
+      sdpAnswer: sdpAnswer ?? this.sdpAnswer,
+      iceCandidatesFromReceiver: iceCandidatesFromReceiver ?? this.iceCandidatesFromReceiver,
     );
   }
 
   @override
   String toString() {
-    return 'Handshake(callerId: $callerId, receiverId: $receiverId, callerIdSent: $callerIdSent, receiverIdSent: $receiverIdSent, status: $status, timestamp: $timestamp, lastUpdated: $lastUpdated)';
+    return 'Handshake(callerId: $callerId, receiverId: $receiverId, callerIdSent: $callerIdSent, receiverIdSent: $receiverIdSent, status: $status, timestamp: $timestamp, lastUpdated: $lastUpdated, sdpOffer: $sdpOffer, iceCandidates: $iceCandidates, sdpAnswer: $sdpAnswer, iceCandidatesFromReceiver: $iceCandidatesFromReceiver)';
   }
 
   @override
@@ -76,7 +130,11 @@ class Handshake {
         other.receiverIdSent == receiverIdSent &&
         other.status == status &&
         other.timestamp == timestamp &&
-        other.lastUpdated == lastUpdated;
+        other.lastUpdated == lastUpdated &&
+        other.sdpOffer == sdpOffer &&
+        other.iceCandidates == iceCandidates &&
+        other.sdpAnswer == sdpAnswer &&
+        other.iceCandidatesFromReceiver == iceCandidatesFromReceiver;
   }
 
   @override
@@ -87,6 +145,10 @@ class Handshake {
         receiverIdSent.hashCode ^
         status.hashCode ^
         timestamp.hashCode ^
-        lastUpdated.hashCode;
+        lastUpdated.hashCode ^
+        sdpOffer.hashCode ^
+        iceCandidates.hashCode ^
+        sdpAnswer.hashCode ^
+        iceCandidatesFromReceiver.hashCode;
   }
 }
