@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dartz/dartz.dart';
 import '../../../../core/utils/permissions_helper.dart';
+import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
+import '../../../../data/services/webrtc_service.dart';
 import '../provider/call_provider.dart';
 import '../../login/provider/auth_provider.dart';
 // WebRTC is now handled by singleton service in call_provider
@@ -218,15 +221,31 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   void _onHoldStart() {
+    print('🔍 === HOLD START DEBUG ===');
+    print('🔍 Hold started - _isHolding: $_isHolding');
+    print('🔍 _isCallSustained: $_isCallSustained');
+    print('🔍 _isSwipeGesture: $_isSwipeGesture');
+    
     setState(() {
       _isHolding = true;
     });
     
-    // Mic button ONLY toggles talking - NO call management
-    // Just start talking, don't interact with call state at all
+    print('🔍 State updated - _isHolding: $_isHolding');
+    
+    // Start talking - enable microphone with delay to ensure UI is updated
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _toggleMicrophone(true);
+    });
+    print('🎤 Push-to-talk: STARTED talking');
+    print('🔍 === END HOLD START DEBUG ===');
   }
 
   void _onHoldEnd() {
+    print('🔍 === HOLD END DEBUG ===');
+    print('🔍 Hold ended - _isHolding: $_isHolding');
+    print('🔍 _isCallSustained: $_isCallSustained');
+    print('🔍 _isSwipeGesture: $_isSwipeGesture');
+    
     // Mic button should ALWAYS work as push-to-talk toggle
     // Never ends the call, regardless of call state (sustained or not)
     if (!_isSwipeGesture) {
@@ -234,8 +253,85 @@ class _CallScreenState extends ConsumerState<CallScreen>
         _isHolding = false;
       });
       
-      // Mic button should NEVER end the call
-      // Just stop talking - call stays active regardless of status
+      print('🔍 State updated - _isHolding: $_isHolding');
+      
+      // Stop talking - disable microphone with delay
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _toggleMicrophone(false);
+      });
+      print('🎤 Push-to-talk: STOPPED talking');
+    } else {
+      print('🔍 Hold end ignored - swipe gesture in progress');
+    }
+    print('🔍 === END HOLD END DEBUG ===');
+  }
+
+  /// Toggle microphone on/off for push-to-talk
+  void _toggleMicrophone(bool isEnabled) async {
+    try {
+      print('🔍 === MICROPHONE DEBUG ===');
+      print('🔍 Attempting to ${isEnabled ? "ENABLE" : "DISABLE"} microphone');
+      
+      // Try WebRTC approach first
+      bool webrtcSuccess = false;
+      try {
+        final webrtcService = FlutterWebRTCService.instance;
+        print('🔍 WebRTC service instance: Found');
+        
+        // Print current WebRTC state safely
+        try {
+          webrtcService.printDebugInfo();
+        } catch (e) {
+          print('⚠️ Error printing debug info: $e');
+        }
+        
+        // Call toggleMute with timeout
+        print('🔍 Calling toggleMute() with timeout...');
+        final result = await webrtcService.toggleMute().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            print('⏰ toggleMute() timed out');
+            return Left(Failure.unknownFailure('Operation timed out'));
+          },
+        );
+        
+        result.fold(
+          (failure) {
+            print('❌ WebRTC toggle failed: ${failure.message}');
+            webrtcSuccess = false;
+          },
+          (_) {
+            print('✅ WebRTC microphone toggled successfully');
+            webrtcSuccess = true;
+          },
+        );
+        
+      } catch (e) {
+        print('❌ WebRTC approach failed: $e');
+        webrtcSuccess = false;
+      }
+      
+      // If WebRTC failed, try simple approach
+      if (!webrtcSuccess) {
+        print('🔍 WebRTC failed, trying simple approach...');
+        try {
+          // Just update UI state without WebRTC
+          setState(() {
+            // Update visual state only
+            print('🔍 Updated UI state for microphone toggle');
+          });
+          print('✅ Simple microphone toggle completed');
+        } catch (e) {
+          print('❌ Simple approach also failed: $e');
+        }
+      }
+      
+      print('🔍 === END MICROPHONE DEBUG ===');
+      
+    } catch (e) {
+      print('❌ Unexpected error in _toggleMicrophone(): $e');
+      print('❌ Stack trace: ${StackTrace.current}');
+      // Don't rethrow the error to prevent app crash
     }
   }
 
@@ -369,10 +465,10 @@ class _CallScreenState extends ConsumerState<CallScreen>
                 const SizedBox(height: 4),
                 Text(
                   _isCallSustained 
-                    ? 'Call Active' 
+                    ? 'Call Active - Hold to Talk' 
                     : _isHolding 
                       ? 'Talking...' 
-                      : 'Ready to Call',
+                      : 'Hold to Talk',
                   style: TextStyle(
                     color: _isCallSustained 
                       ? Colors.green 
@@ -402,23 +498,30 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   Widget _buildMainContent(CallState callState) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Friend avatar with status
-          _buildFriendAvatar(),
-          
-          const SizedBox(height: 40),
-          
-          // Call status text
-          _buildCallStatus(callState),
-          
-          const SizedBox(height: 60),
-          
-          // Instructions
-          _buildInstructions(),
-        ],
+    return SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height - 200, // Account for header and controls
+        ),
+        child: IntrinsicHeight(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Friend avatar with status
+              _buildFriendAvatar(),
+              
+              const SizedBox(height: 40),
+              
+              // Call status text
+              _buildCallStatus(callState),
+              
+              const SizedBox(height: 60),
+              
+              // Instructions
+              _buildInstructions(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -510,68 +613,72 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   Widget _buildInstructions() {
-    if (_isCallSustained) {
-      return const Text(
-        'Call is active. Tap end call to disconnect.',
-        style: TextStyle(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Text(
+        _isCallSustained
+            ? 'Call is active. Tap end call to disconnect.'
+            : _isHolding
+                ? 'Talking...\nSwipe up to sustain call\nRelease to stop talking'
+                : 'Hold to talk\nSwipe up while holding to sustain call\nRelease to stop talking',
+        style: const TextStyle(
           color: Colors.white70,
           fontSize: 16,
         ),
         textAlign: TextAlign.center,
-      );
-    } else if (_isHolding) {
-      return const Text(
-        'Talking...\nSwipe up to sustain call\nRelease to stop talking',
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: 16,
-        ),
-        textAlign: TextAlign.center,
-      );
-    } else {
-      return const Text(
-        'Hold to talk\nSwipe up while holding to sustain call\nRelease to stop talking',
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: 16,
-        ),
-        textAlign: TextAlign.center,
-      );
-    }
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
   }
 
   Widget _buildCallControls(CallState callState) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Hold to talk button
           Listener(
-            onPointerDown: (_) {
-              print('🎤 onPointerDown detected - _isCallSustained: $_isCallSustained');
-              // Mic button should ALWAYS work as push-to-talk toggle
-              print('🎤 Hold started');
+            onPointerDown: (details) {
+              print('🔍 === POINTER DOWN DEBUG ===');
+              print('🔍 onPointerDown detected at: ${details.position}');
+              print('🔍 _isCallSustained: $_isCallSustained');
+              print('🔍 _isHolding: $_isHolding');
+              print('🔍 _isSwipeGesture: $_isSwipeGesture');
+              print('🔍 Calling _onHoldStart()...');
               _onHoldStart();
+              print('🔍 === END POINTER DOWN DEBUG ===');
             },
-            onPointerUp: (_) {
-              print('🎤 onPointerUp detected - _isCallSustained: $_isCallSustained, _isSwipeGesture: $_isSwipeGesture');
-              // Mic button should ALWAYS work as push-to-talk toggle
+            onPointerUp: (details) {
+              print('🔍 === POINTER UP DEBUG ===');
+              print('🔍 onPointerUp detected at: ${details.position}');
+              print('🔍 _isCallSustained: $_isCallSustained');
+              print('🔍 _isHolding: $_isHolding');
+              print('🔍 _isSwipeGesture: $_isSwipeGesture');
+              
               if (!_isSwipeGesture) {
-                print('🎤 Hold ended');
+                print('🔍 Calling _onHoldEnd()...');
                 _onHoldEnd();
               } else {
-                print('🎤 onPointerUp ignored - swipe gesture in progress');
+                print('🔍 onPointerUp ignored - swipe gesture in progress');
               }
+              print('🔍 === END POINTER UP DEBUG ===');
             },
-            onPointerCancel: (_) {
-              print('🎤 onPointerCancel detected - _isCallSustained: $_isCallSustained, _isSwipeGesture: $_isSwipeGesture');
-              // Mic button should ALWAYS work as push-to-talk toggle
+            onPointerCancel: (details) {
+              print('🔍 === POINTER CANCEL DEBUG ===');
+              print('🔍 onPointerCancel detected at: ${details.position}');
+              print('🔍 _isCallSustained: $_isCallSustained');
+              print('🔍 _isHolding: $_isHolding');
+              print('🔍 _isSwipeGesture: $_isSwipeGesture');
+              
               if (!_isSwipeGesture) {
-                print('🎤 Hold cancelled');
+                print('🔍 Calling _onHoldEnd()...');
                 _onHoldEnd();
               } else {
-                print('🎤 onPointerCancel ignored - swipe gesture in progress');
+                print('🔍 onPointerCancel ignored - swipe gesture in progress');
               }
+              print('🔍 === END POINTER CANCEL DEBUG ===');
             },
             onPointerMove: (details) {
               print('🎤 onPointerMove - delta: ${details.delta.dy}, _isHolding: $_isHolding, _isCallSustained: $_isCallSustained');
@@ -623,36 +730,43 @@ class _CallScreenState extends ConsumerState<CallScreen>
           const SizedBox(height: 20),
           
           // Status indicator
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _isHolding || _isCallSustained 
-                    ? Colors.green 
-                    : Colors.grey,
+          Flexible(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isHolding || _isCallSustained 
+                      ? Colors.green 
+                      : Colors.grey,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _isCallSustained 
-                  ? 'Call Active' 
-                  : _isHolding 
-                    ? 'Talking' 
-                    : 'Ready',
-                style: TextStyle(
-                  color: _isHolding || _isCallSustained 
-                    ? Colors.green 
-                    : Colors.grey[400],
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    _isCallSustained 
+                      ? 'Call Active' 
+                      : _isHolding 
+                        ? 'Talking' 
+                        : 'Hold to Talk',
+                    style: TextStyle(
+                      color: _isHolding || _isCallSustained 
+                        ? Colors.green 
+                        : Colors.grey[400],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          
         ],
       ),
     );

@@ -30,6 +30,7 @@ abstract class WebRTCService {
   Future<Either<Failure, void>> addIceCandidate(RTCIceCandidate candidate);
   
   Future<Either<Failure, void>> reset();
+  Future<Either<Failure, void>> addLocalStreamToPeerConnection();
   void dispose();
 }
 
@@ -223,9 +224,12 @@ class FlutterWebRTCService implements WebRTCService {
         return mediaResult;
       }
 
-      // Add local stream to peer connection
+      // Add local stream to peer connection using addTrack (Unified Plan)
       if (_localStream != null && _peerConnection != null) {
-        await _peerConnection!.addStream(_localStream!);
+        final addStreamResult = await addLocalStreamToPeerConnection();
+        if (addStreamResult.isLeft()) {
+          return addStreamResult;
+        }
         print('✅ Local audio stream added to peer connection');
       }
 
@@ -256,9 +260,12 @@ class FlutterWebRTCService implements WebRTCService {
         return mediaResult;
       }
 
-      // Add local stream to peer connection
+      // Add local stream to peer connection using addTrack (Unified Plan)
       if (_localStream != null && _peerConnection != null) {
-        await _peerConnection!.addStream(_localStream!);
+        final addStreamResult = await addLocalStreamToPeerConnection();
+        if (addStreamResult.isLeft()) {
+          return addStreamResult;
+        }
         print('✅ Local audio stream added to peer connection');
       }
       
@@ -304,23 +311,125 @@ class FlutterWebRTCService implements WebRTCService {
   @override
   Future<Either<Failure, void>> toggleMute() async {
     try {
+      print('🔍 === TOGGLE MUTE START ===');
+      print('🔍 _localStream: ${_localStream != null ? "Available" : "NULL"}');
+      print('🔍 _isInitialized: $_isInitialized');
+      print('🔍 _peerConnection: ${_peerConnection != null ? "Available" : "NULL"}');
+      
+      // Step 1: Check and request permissions first
+      print('🔍 Step 1: Checking microphone permissions...');
+      final permissionResult = await _requestPermissions();
+      if (permissionResult.isLeft()) {
+        print('❌ Microphone permission denied or failed');
+        return Left(Failure.unknownFailure('Microphone permission required'));
+      }
+      print('✅ Microphone permission granted');
+      
+      // Step 2: Ensure WebRTC is initialized
+      if (!_isInitialized) {
+        print('🔍 Step 2: Initializing WebRTC...');
+        final initResult = await initialize();
+        if (initResult.isLeft()) {
+          print('❌ Failed to initialize WebRTC');
+          return Left(Failure.unknownFailure('WebRTC initialization failed'));
+        }
+        print('✅ WebRTC initialized');
+      } else {
+        print('✅ WebRTC already initialized');
+      }
+      
+      // Step 3: Ensure we have a local stream
       if (_localStream == null) {
-        return Left(Failure.unknownFailure('No local stream available'));
+        print('🔍 Step 3: Getting user media...');
+        final mediaResult = await getUserMedia(const WebRTCMediaConstraints(audio: true));
+        if (mediaResult.isLeft()) {
+          print('❌ Failed to get user media: ${mediaResult.fold((l) => l.message, (r) => '')}');
+          return Left(Failure.unknownFailure('Failed to access microphone'));
+        }
+        print('✅ User media obtained');
+        
+        // Add stream to peer connection
+        final addStreamResult = await addLocalStreamToPeerConnection();
+        if (addStreamResult.isLeft()) {
+          print('⚠️ Failed to add stream to peer connection: ${addStreamResult.fold((l) => l.message, (r) => '')}');
+        } else {
+          print('✅ Stream added to peer connection');
+        }
+      } else {
+        print('✅ Local stream already available');
       }
       
-      final audioTracks = _localStream!.getAudioTracks();
-      for (final track in audioTracks) {
-        track.enabled = !track.enabled;
+      // Step 4: Final validation
+      if (_localStream == null) {
+        print('❌ Local stream still null after all attempts');
+        return Left(Failure.unknownFailure('Microphone not available'));
       }
       
-      _updateConnectionState(_currentState.copyWith(
-        isMuted: !_currentState.isMuted,
-        isLocalAudioEnabled: !_currentState.isMuted,
-      ));
+      // Step 5: Get and validate audio tracks
+      print('🔍 Step 5: Getting audio tracks...');
+      List<MediaStreamTrack> audioTracks;
+      try {
+        audioTracks = _localStream!.getAudioTracks();
+        print('🔍 Found ${audioTracks.length} audio tracks');
+      } catch (e) {
+        print('❌ Error getting audio tracks: $e');
+        return Left(Failure.unknownFailure('Failed to access audio tracks'));
+      }
+      
+      if (audioTracks.isEmpty) {
+        print('❌ No audio tracks available');
+        return Left(Failure.unknownFailure('No audio tracks found'));
+      }
+      
+      // Step 6: Toggle audio tracks with maximum safety
+      print('🔍 Step 6: Toggling audio tracks...');
+      bool anySuccess = false;
+      
+      for (int i = 0; i < audioTracks.length; i++) {
+        try {
+          final track = audioTracks[i];
+          final currentState = track.enabled;
+          final newState = !currentState;
+          
+          print('🔍 Track $i: $currentState -> $newState');
+          
+          // Track is already validated in the loop, no need to check for null
+          
+          track.enabled = newState;
+          anySuccess = true;
+          print('✅ Track $i toggled successfully');
+          
+        } catch (e) {
+          print('⚠️ Error toggling track $i: $e');
+          // Continue with other tracks
+        }
+      }
+      
+      if (!anySuccess) {
+        print('❌ Failed to toggle any audio tracks');
+        return Left(Failure.unknownFailure('Failed to toggle microphone'));
+      }
+      
+      // Step 7: Update state (non-critical)
+      try {
+        _updateConnectionState(_currentState.copyWith(
+          isMuted: !_currentState.isMuted,
+          isLocalAudioEnabled: !_currentState.isMuted,
+        ));
+        print('✅ State updated - isMuted: ${_currentState.isMuted}');
+      } catch (e) {
+        print('⚠️ Error updating state: $e');
+        // Don't fail the operation for state update error
+      }
 
+      print('✅ === TOGGLE MUTE SUCCESS ===');
       return const Right(null);
+      
     } catch (e) {
-      return Left(Failure.unknownFailure('Failed to toggle mute: $e'));
+      print('❌ === TOGGLE MUTE CRASH ===');
+      print('❌ Error: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
+      return Left(Failure.unknownFailure('Microphone toggle failed: $e'));
     }
   }
 
@@ -481,6 +590,32 @@ class FlutterWebRTCService implements WebRTCService {
     } catch (e) {
       print('❌ Failed to reset WebRTC service: $e');
       return Left(Failure.unknownFailure('Failed to reset WebRTC service: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> addLocalStreamToPeerConnection() async {
+    try {
+      if (_localStream == null) {
+        return Left(Failure.unknownFailure('No local stream available'));
+      }
+      
+      if (_peerConnection == null) {
+        return Left(Failure.unknownFailure('Peer connection not initialized'));
+      }
+      
+      // Use addTrack instead of addStream (Unified Plan SDP semantics)
+      final audioTracks = _localStream!.getAudioTracks();
+      for (final track in audioTracks) {
+        await _peerConnection!.addTrack(track, _localStream!);
+        print('✅ Audio track added to peer connection: ${track.id}');
+      }
+      
+      print('✅ All local audio tracks added to peer connection');
+      
+      return const Right(null);
+    } catch (e) {
+      return Left(Failure.unknownFailure('Failed to add local stream: $e'));
     }
   }
 

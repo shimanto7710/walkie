@@ -65,6 +65,32 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
               // Get receiver's ICE candidates
               final receiverIceCandidates = await gatherIceCandidates();
 
+              // Add local stream to peer connection for incoming calls
+              print('📞 Adding local stream to peer connection for incoming call...');
+              final addStreamResult = await webrtcService?.addLocalStreamToPeerConnection();
+              addStreamResult?.fold(
+                (failure) {
+                  print('❌ Failed to add local stream to peer connection: ${failure.message}');
+                },
+                (_) {
+                  print('✅ Local audio stream added to peer connection for incoming call');
+                },
+              );
+
+              // Call is now ready - SDP and ICE exchange completed
+              print('📞 Incoming call is ready - SDP and ICE exchange completed');
+
+              // Now initiate the actual call using WebRTC service
+              print('🚀 Initiating incoming call...');
+              final callResult = await webrtcService?.acceptCall();
+              callResult?.fold(
+                (failure) {
+                  print('❌ Failed to accept call: ${failure.message}');
+                },
+                (_) {
+                  print('✅ Incoming call accepted successfully');
+                },
+              );
 
               // Only proceed if we have valid data
               if (answerSdp?.sdp != null) {

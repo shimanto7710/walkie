@@ -200,18 +200,50 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
       final mediaResult = await webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
       if (mediaResult.isRight()) {
         print('✅ Local media stream obtained for call acknowledge');
+        
+        // Add local stream to peer connection - this is crucial for call initiation
+        final addStreamResult = await webrtcService!.addLocalStreamToPeerConnection();
+        addStreamResult.fold(
+          (failure) {
+            print('❌ Failed to add local stream to peer connection: ${failure.message}');
+          },
+          (_) {
+            print('✅ Local audio stream added to peer connection for call');
+          },
+        );
       } else {
         print('⚠️ Failed to get local media stream in call acknowledge');
       }
 
-      // Update call state to connected
-      state = state.copyWith(
-        status: CallStatus.connected,
-        isConnecting: false,
-        isConnected: true,
-      );
+      // Call is now ready - SDP and ICE exchange completed
+      print('📞 Call is ready - SDP and ICE exchange completed');
 
-      print('✅ WebRTC connection established successfully');
+      // Now initiate the actual call using WebRTC service
+      print('🚀 Initiating call...');
+      final callResult = await webrtcService!.startCall(_currentReceiverId ?? '');
+      callResult.fold(
+        (failure) {
+          print('❌ Failed to start call: ${failure.message}');
+          state = state.copyWith(
+            status: CallStatus.failed,
+            isConnecting: false,
+            isConnected: false,
+            errorMessage: 'Failed to start call: ${failure.message}',
+          );
+        },
+        (_) {
+          print('✅ Call initiated successfully');
+          
+          // Update call state to connected
+          state = state.copyWith(
+            status: CallStatus.connected,
+            isConnecting: false,
+            isConnected: true,
+          );
+          
+          print('✅ WebRTC connection established successfully');
+        },
+      );
 
     } catch (e) {
       print('❌ Error handling call acknowledge: $e');
