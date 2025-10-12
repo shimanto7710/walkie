@@ -6,7 +6,7 @@ import '../../domain/entities/webrtc_media_stream.dart';
 import '../../core/errors/failures.dart';
 import 'package:dartz/dartz.dart';
 
-abstract class MinimalWebRTCService {
+abstract class WebRTCService {
   Future<Either<Failure, void>> initialize();
   Future<Either<Failure, void>> startCall(String remoteUserId);
   Future<Either<Failure, void>> acceptCall();
@@ -29,25 +29,26 @@ abstract class MinimalWebRTCService {
   Stream<RTCIceCandidate> get iceCandidateStream;
   Future<Either<Failure, void>> addIceCandidate(RTCIceCandidate candidate);
   
+  Future<Either<Failure, void>> reset();
   void dispose();
 }
 
-class MinimalFlutterWebRTCService implements MinimalWebRTCService {
+class FlutterWebRTCService implements WebRTCService {
   // Singleton instance
-  static MinimalFlutterWebRTCService? _instance;
+  static FlutterWebRTCService? _instance;
   
   // Private constructor
-  MinimalFlutterWebRTCService._internal();
+  FlutterWebRTCService._internal();
   
   // Factory constructor that returns the singleton instance
-  factory MinimalFlutterWebRTCService() {
-    _instance ??= MinimalFlutterWebRTCService._internal();
+  factory FlutterWebRTCService() {
+    _instance ??= FlutterWebRTCService._internal();
     return _instance!;
   }
   
   // Static method to get the instance
-  static MinimalFlutterWebRTCService get instance {
-    _instance ??= MinimalFlutterWebRTCService._internal();
+  static FlutterWebRTCService get instance {
+    _instance ??= FlutterWebRTCService._internal();
     return _instance!;
   }
   
@@ -70,7 +71,11 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
   Future<Either<Failure, void>> initialize() async {
     try {
       if (_isInitialized) {
-        return Left(const Failure.unknownFailure('WebRTC service already initialized'));
+        print('⚠️ WebRTC service already initialized, resetting...');
+        final resetResult = await reset();
+        if (resetResult.isLeft()) {
+          return resetResult;
+        }
       }
       
       // Request permissions
@@ -132,8 +137,10 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
     
     _peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
       print('🧊 ICE candidate received: ${candidate.candidate}');
+      print('🧊 ICE candidate sdpMid: ${candidate.sdpMid}, sdpMLineIndex: ${candidate.sdpMLineIndex}');
       _iceCandidates.add(candidate);
       _iceCandidateController.add(candidate);
+      print('🧊 Total ICE candidates collected: ${_iceCandidates.length}');
     };
 
     _peerConnection?.onAddStream = (MediaStream stream) {
@@ -344,9 +351,13 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
+      print('📞 Creating SDP offer...');
       final offer = await _peerConnection!.createOffer();
+      print('✅ SDP offer created: ${offer.sdp?.length ?? 0} characters');
+      print('📞 Offer type: ${offer.type}');
       return Right(offer);
     } catch (e) {
+      print('❌ Failed to create offer: $e');
       return Left(Failure.unknownFailure('Failed to create offer: $e'));
     }
   }
@@ -358,9 +369,13 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
+      print('📞 Creating SDP answer...');
       final answer = await _peerConnection!.createAnswer();
+      print('✅ SDP answer created: ${answer.sdp?.length ?? 0} characters');
+      print('📞 Answer type: ${answer.type}');
       return Right(answer);
     } catch (e) {
+      print('❌ Failed to create answer: $e');
       return Left(Failure.unknownFailure('Failed to create answer: $e'));
     }
   }
@@ -372,9 +387,13 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
+      print('📞 Setting local description: ${description.type}');
+      print('📞 Local SDP length: ${description.sdp?.length ?? 0} characters');
       await _peerConnection!.setLocalDescription(description);
+      print('✅ Local description set successfully');
       return const Right(null);
     } catch (e) {
+      print('❌ Failed to set local description: $e');
       return Left(Failure.unknownFailure('Failed to set local description: $e'));
     }
   }
@@ -386,9 +405,13 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
+      print('📞 Setting remote description: ${description.type}');
+      print('📞 Remote SDP length: ${description.sdp?.length ?? 0} characters');
       await _peerConnection!.setRemoteDescription(description);
+      print('✅ Remote description set successfully');
       return const Right(null);
     } catch (e) {
+      print('❌ Failed to set remote description: $e');
       return Left(Failure.unknownFailure('Failed to set remote description: $e'));
     }
   }
@@ -409,11 +432,66 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
+      print('🧊 Adding ICE candidate: ${candidate.candidate}');
+      print('🧊 ICE candidate sdpMid: ${candidate.sdpMid}, sdpMLineIndex: ${candidate.sdpMLineIndex}');
       await _peerConnection!.addCandidate(candidate);
+      print('✅ ICE candidate added successfully');
       return const Right(null);
     } catch (e) {
+      print('❌ Failed to add ICE candidate: $e');
       return Left(Failure.unknownFailure('Failed to add ICE candidate: $e'));
     }
+  }
+
+  @override
+  Future<Either<Failure, void>> reset() async {
+    try {
+      print('🔄 Resetting WebRTC service...');
+      
+      // Close existing peer connection
+      if (_peerConnection != null) {
+        await _peerConnection!.close();
+        _peerConnection = null;
+      }
+      
+      // Clear ICE candidates
+      _iceCandidates.clear();
+      
+      // Reset state
+      _isInitialized = false;
+      _currentState = const WebRTCConnectionState();
+      
+      // Create new peer connection
+      await _createPeerConnection();
+      _isInitialized = true;
+      
+      _updateConnectionState(const WebRTCConnectionState(
+        status: WebRTCConnectionStatus.disconnected,
+        isInitialized: true,
+      ));
+      
+      print('✅ WebRTC service reset successfully');
+      return const Right(null);
+    } catch (e) {
+      print('❌ Failed to reset WebRTC service: $e');
+      return Left(Failure.unknownFailure('Failed to reset WebRTC service: $e'));
+    }
+  }
+
+  /// Debug method to print current WebRTC state
+  void printDebugInfo() {
+    print('🔍 === WebRTC Debug Info ===');
+    print('🔍 Initialized: $_isInitialized');
+    print('🔍 Peer Connection: ${_peerConnection != null ? "Created" : "Null"}');
+    print('🔍 ICE Candidates: ${_iceCandidates.length}');
+    print('🔍 Local Stream: ${_localStream != null ? "Active" : "Null"}');
+    print('🔍 Remote Stream: ${_remoteStream != null ? "Active" : "Null"}');
+    print('🔍 Current State: ${_currentState.status}');
+    if (_peerConnection != null) {
+      print('🔍 Signaling State: ${_peerConnection!.signalingState}');
+      print('🔍 Connection State: ${_peerConnection!.connectionState}');
+    }
+    print('🔍 === End Debug Info ===');
   }
 
   @override
@@ -434,4 +512,3 @@ class MinimalFlutterWebRTCService implements MinimalWebRTCService {
     _instance = null;
   }
 }
-

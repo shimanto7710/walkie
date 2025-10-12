@@ -4,13 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/utils/permissions_helper.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
-import '../provider/simple_call_provider.dart';
+import '../provider/call_provider.dart';
 import '../../login/provider/auth_provider.dart';
-import '../provider/simple_webrtc_provider.dart';
-
-/*final webrtcCallStateProvider = StateNotifierProvider<WebRTCCallNotifier, CallState>((ref) {
-  return WebRTCCallNotifier();
-});*/
+// WebRTC is now handled by singleton service in call_provider
 
 class CallScreen extends ConsumerStatefulWidget {
   final User friend;
@@ -104,15 +100,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
         return;
       }
 
-      // Initialize WebRTC
-      final controller = ref.read(webrtcCallStateProvider.notifier);
-      await controller.initialize();
-
-      // Set local user ID
-      final authState = ref.read(authProvider);
-      if (authState.currentUser != null) {
-        controller.setLocalUserId(authState.currentUser!.id);
-      }
+      // WebRTC is now handled by singleton service in providers
+      // No need to initialize here as it's done in call_provider
 
       _initializeHandshake();
 
@@ -171,7 +160,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
     try {
       final authState = ref.read(authProvider);
       if (authState.currentUser != null) {
-        final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+        final callNotifier = ref.read(callNotifierProvider.notifier);
         
         if (widget.isIncomingCall) {
           print('📞 Incoming call detected - starting to listen for handshake changes');
@@ -204,12 +193,12 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   void _startCall() {
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+    final callNotifier = ref.read(callNotifierProvider.notifier);
     callNotifier.startCall();
   }
 
   void _acceptCall() {
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+    final callNotifier = ref.read(callNotifierProvider.notifier);
     callNotifier.acceptCall();
   }
 
@@ -220,12 +209,10 @@ class _CallScreenState extends ConsumerState<CallScreen>
     _swipeController.dispose();
     
     // Reset call state
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+    final callNotifier = ref.read(callNotifierProvider.notifier);
     callNotifier.reset();
 
-    // Reset WebRTC state
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    controller.reset();
+    // WebRTC state is now managed by singleton service
     
     super.dispose();
   }
@@ -274,7 +261,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
     
     // Get current user and close call with Firebase update
     final authState = ref.read(authProvider);
-    final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+    final callNotifier = ref.read(callNotifierProvider.notifier);
     
     if (authState.currentUser != null) {
       // Close call and update Firebase status to 'close_call'
@@ -293,42 +280,12 @@ class _CallScreenState extends ConsumerState<CallScreen>
     // Navigation to home will be handled by the call state listener
   }
 
-  void _startCallWebRTC() async {
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    await controller.startCall(widget.friend.id);
-  }
-
-  void _acceptCallWebRTC() async {
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    await controller.acceptCall();
-  }
-
-  void _rejectCallWebRTC() async {
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    await controller.rejectCall();
-    context.go('/home');
-  }
-
-  void _endCallWebRTC() async {
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    await controller.endCall();
-    context.go('/home');
-  }
-
-  void _toggleMuteWebRTC() async {
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    await controller.toggleMute();
-  }
-
-  void _toggleSpeakerWebRTC() async {
-    final controller = ref.read(webrtcCallStateProvider.notifier);
-    await controller.toggleSpeaker();
-  }
+  // WebRTC operations are now handled by singleton service in call_provider
 
   @override
   Widget build(BuildContext context) {
     // Listen to simple call state changes
-    ref.listen<CallState>(simpleCallNotifierProvider, (previous, next) {
+    ref.listen<CallState>(callNotifierProvider, (previous, next) {
       print('📞 Call state changed: ${previous?.status} -> ${next.status}');
       
       if (next.status == CallStatus.connected) {
@@ -342,22 +299,11 @@ class _CallScreenState extends ConsumerState<CallScreen>
       }
     });
 
-    // Listen to WebRTC call state changes
-    ref.listen<CallState>(webrtcCallStateProvider, (previous, next) {
-      if (next.status == CallStatus.connected) {
-        setState(() {
-          _isCallSustained = true;
-        });
-      } else if (next.status == CallStatus.ended) {
-        context.go('/home');
-      } else if (next.status == CallStatus.failed) {
-        _showErrorDialog(next.errorMessage ?? 'Call failed');
-      }
-    });
+    // WebRTC call state changes are now handled by call_provider
 
-    // Handshake changes are now handled within the SimpleCallNotifier
+    // Handshake changes are now handled within the CallNotifier
 
-    final callState = ref.watch(simpleCallNotifierProvider);
+    final callState = ref.watch(callNotifierProvider);
     
     return Scaffold(
       backgroundColor: Colors.black,

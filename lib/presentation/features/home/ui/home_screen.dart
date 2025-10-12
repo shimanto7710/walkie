@@ -5,7 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../provider/friends_provider.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
-import '../../call/provider/simple_call_provider.dart';
+import '../../call/provider/call_provider.dart';
 import '../../call/provider/global_handshake_provider.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
@@ -56,7 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final friendsAsync = ref.watch(friendsNotifierProvider);
     
     // Listen for call state changes
-    ref.listen<CallState>(simpleCallNotifierProvider, (previous, next) {
+    ref.listen<CallState>(callNotifierProvider, (previous, next) {
       if (next.status == CallStatus.ringing && next.remoteUserId != null) {
         print('📞 Incoming call detected on home screen from ${next.remoteUserId}');
         
@@ -440,7 +440,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
 
       // Test simple call functionality
-      final callNotifier = ref.read(simpleCallNotifierProvider.notifier);
+      final callNotifier = ref.read(callNotifierProvider.notifier);
       callNotifier.startCall();
       
       ScaffoldMessenger.of(context).showSnackBar(

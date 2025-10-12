@@ -5,24 +5,24 @@ import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
 import '../../../../data/services/handshake_operations.dart';
-import '../../../../data/services/minimal_webrtc_service.dart';
+import '../../../../data/services/webrtc_service.dart';
 
-part 'simple_call_provider.g.dart';
+part 'call_provider.g.dart';
 
 @riverpod
-class SimpleCallNotifier extends _$SimpleCallNotifier {
+class CallNotifier extends _$CallNotifier {
   FirebaseHandshakeService? _handshakeService;
   HandshakeOperations? _handshakeOperations;
   StreamSubscription<Handshake>? _handshakeSubscription;
   String? _currentCallerId;
   String? _currentReceiverId;
-  MinimalWebRTCService? _webrtcService;
+  WebRTCService? _webrtcService;
 
   @override
   CallState build() {
     _handshakeService = FirebaseHandshakeService();
     _handshakeOperations = HandshakeOperations();
-    _webrtcService = MinimalFlutterWebRTCService.instance;
+    _webrtcService = FlutterWebRTCService.instance;
     // Initialize WebRTC service asynchronously
     _initializeWebRTCService();
     return const CallState();
