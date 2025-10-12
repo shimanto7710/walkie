@@ -55,6 +55,7 @@ mixin BaseCallProvider {
         return null;
       }
 
+      print('🔍 === SDP OFFER CREATION ===');
       final offerResult = await _webrtcService!.createOffer();
       RTCSessionDescription? sdpOffer;
       
@@ -66,6 +67,10 @@ mixin BaseCallProvider {
         (offer) {
           sdpOffer = offer;
           print('✅ SDP offer created successfully');
+          print('📄 SDP Type: ${offer.type}');
+          print('📄 SDP Length: ${offer.sdp?.length ?? 0} characters');
+          print('📄 SDP Preview: ${offer.sdp?.substring(0, 100)}...');
+          print('🔍 === END SDP OFFER ===');
         },
       );
 
@@ -84,6 +89,7 @@ mixin BaseCallProvider {
         return null;
       }
 
+      print('🔍 === SDP ANSWER CREATION ===');
       final answerResult = await _webrtcService!.createAnswer();
       RTCSessionDescription? sdpAnswer;
       
@@ -95,6 +101,10 @@ mixin BaseCallProvider {
         (answer) {
           sdpAnswer = answer;
           print('✅ SDP answer created successfully');
+          print('📄 SDP Type: ${answer.type}');
+          print('📄 SDP Length: ${answer.sdp?.length ?? 0} characters');
+          print('📄 SDP Preview: ${answer.sdp?.substring(0, 100)}...');
+          print('🔍 === END SDP ANSWER ===');
         },
       );
 
@@ -114,6 +124,9 @@ mixin BaseCallProvider {
       return iceCandidates;
     }
     
+    print('🔍 === ICE CANDIDATE GATHERING ===');
+    print('⏳ Starting ICE candidate gathering...');
+    
     // Wait for ICE candidates to be gathered with timeout
     const maxWaitTime = Duration(seconds: 3);
     const checkInterval = Duration(milliseconds: 100);
@@ -127,15 +140,25 @@ mixin BaseCallProvider {
       final currentCandidates = _webrtcService!.getIceCandidates();
       if (currentCandidates.isNotEmpty) {
         iceCandidates = List.from(currentCandidates);
-        print('🧊 Gathered ${iceCandidates.length} ICE candidates');
+        print('✅ Gathered ${iceCandidates.length} ICE candidates');
+        
+        // Log details of each ICE candidate
+        for (int i = 0; i < iceCandidates.length; i++) {
+          final candidate = iceCandidates[i];
+          print('🧊 ICE Candidate ${i + 1}:');
+          print('   📍 Candidate: ${candidate.candidate}');
+          print('   🏷️  SDP Mid: ${candidate.sdpMid}');
+          print('   🔢 SDP MLine Index: ${candidate.sdpMLineIndex}');
+        }
         break;
       }
     }
     
     if (iceCandidates.isEmpty) {
-      print('⚠️ No ICE candidates gathered within timeout');
+      print('⚠️ No ICE candidates gathered within ${maxWaitTime.inSeconds}s timeout');
     }
-
+    
+    print('🔍 === END ICE GATHERING ===');
     return iceCandidates;
   }
 

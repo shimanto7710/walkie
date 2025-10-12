@@ -500,6 +500,24 @@ class FlutterWebRTCService implements WebRTCService {
     print('🔍 === End Debug Info ===');
   }
 
+  /// Debug method to check ICE candidate stream
+  void debugIceCandidateStream() {
+    print('🔍 === ICE CANDIDATE STREAM DEBUG ===');
+    print('🔍 Stream Controller Closed: ${_iceCandidateController.isClosed}');
+    print('🔍 Stream Has Listener: ${_iceCandidateController.hasListener}');
+    print('🔍 Current ICE Candidates Count: ${_iceCandidates.length}');
+    
+    if (_iceCandidates.isNotEmpty) {
+      print('🔍 ICE Candidates Details:');
+      for (int i = 0; i < _iceCandidates.length; i++) {
+        final candidate = _iceCandidates[i];
+        print('   🧊 Candidate ${i + 1}: ${candidate.candidate}');
+        print('   🏷️  SDP Mid: ${candidate.sdpMid}, Index: ${candidate.sdpMLineIndex}');
+      }
+    }
+    print('🔍 === END ICE STREAM DEBUG ===');
+  }
+
   @override
   void dispose() {
     _peerConnection?.close();
