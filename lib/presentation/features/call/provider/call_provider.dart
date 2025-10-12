@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
+import '../../../../domain/entities/webrtc_media_stream.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
 import '../../../../data/services/handshake_operations.dart';
 import '../../../../data/services/webrtc_service.dart';
@@ -178,31 +179,54 @@ class CallNotifier extends _$CallNotifier {
 
   /// Create SDP offer
   Future<RTCSessionDescription?> _createSdpOffer() async {
-    // Create SDP offer
-    final offerResult = await _webrtcService!.createOffer();
-    RTCSessionDescription? sdpOffer;
-    
-    offerResult.fold(
-      (failure) => print('Failed to create offer: ${failure.message}'),
-      (offer) {
-        sdpOffer = offer;
-      },
-    );
+    try {
+      // Create SDP offer
+      final offerResult = await _webrtcService!.createOffer();
+      RTCSessionDescription? sdpOffer;
+      
+      offerResult.fold(
+        (failure) {
+          print('❌ Failed to create offer: ${failure.message}');
+          throw Exception('SDP offer creation failed: ${failure.message}');
+        },
+        (offer) {
+          sdpOffer = offer;
+          print('✅ SDP offer created successfully');
+        },
+      );
 
-    return sdpOffer;
+      return sdpOffer;
+    } catch (e) {
+      print('❌ Error creating SDP offer: $e');
+      return null;
+    }
   }
 
   /// Gather ICE candidates
   Future<List<RTCIceCandidate>> _gatherIceCandidates() async {
     List<RTCIceCandidate> iceCandidates = [];
-
-    // Wait for ICE candidates to be gathered
-    await Future.delayed(const Duration(milliseconds: 1000));
-
-    // Get real ICE candidates from WebRTC service
-    final realIceCandidates = _webrtcService!.getIceCandidates();
-    iceCandidates.addAll(realIceCandidates);
-
+    
+    // Wait for ICE candidates to be gathered with timeout
+    const maxWaitTime = Duration(seconds: 3);
+    const checkInterval = Duration(milliseconds: 100);
+    int waitedTime = 0;
+    
+    while (waitedTime < maxWaitTime.inMilliseconds) {
+      await Future.delayed(checkInterval);
+      waitedTime += checkInterval.inMilliseconds;
+      
+      // Get current ICE candidates
+      final currentCandidates = _webrtcService!.getIceCandidates();
+      if (currentCandidates.isNotEmpty) {
+        iceCandidates = List.from(currentCandidates);
+        print('🧊 Gathered ${iceCandidates.length} ICE candidates');
+        break;
+      }
+    }
+    
+    if (iceCandidates.isEmpty) {
+      print('⚠️ No ICE candidates gathered within timeout');
+    }
 
     return iceCandidates;
   }
@@ -276,6 +300,14 @@ class CallNotifier extends _$CallNotifier {
         }
       } else {
         print('⚠️ No ICE candidates received from receiver');
+      }
+
+      // Ensure we have local media stream for the call
+      final mediaResult = await _webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
+      if (mediaResult.isRight()) {
+        print('✅ Local media stream obtained for call acknowledge');
+      } else {
+        print('⚠️ Failed to get local media stream in call acknowledge');
       }
 
       // Update call state to connected

@@ -223,9 +223,12 @@ class FlutterWebRTCService implements WebRTCService {
         return mediaResult;
       }
 
-      // Simulate call start
-      await Future.delayed(const Duration(seconds: 1));
-      
+      // Add local stream to peer connection
+      if (_localStream != null && _peerConnection != null) {
+        await _peerConnection!.addStream(_localStream!);
+        print('✅ Local audio stream added to peer connection');
+      }
+
       _updateConnectionState(_currentState.copyWith(
         status: WebRTCConnectionStatus.connected,
       ));
@@ -253,8 +256,11 @@ class FlutterWebRTCService implements WebRTCService {
         return mediaResult;
       }
 
-      // Simulate call acceptance
-      await Future.delayed(const Duration(seconds: 1));
+      // Add local stream to peer connection
+      if (_localStream != null && _peerConnection != null) {
+        await _peerConnection!.addStream(_localStream!);
+        print('✅ Local audio stream added to peer connection');
+      }
       
       _updateConnectionState(_currentState.copyWith(
         status: WebRTCConnectionStatus.connected,
