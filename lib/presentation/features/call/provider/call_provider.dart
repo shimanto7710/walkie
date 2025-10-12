@@ -4,40 +4,21 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../domain/entities/webrtc_media_stream.dart';
-import '../../../../data/services/firebase_handshake_service.dart';
-import '../../../../data/services/handshake_operations.dart';
-import '../../../../data/services/webrtc_service.dart';
+import 'base_call_provider.dart';
 
 part 'call_provider.g.dart';
 
 @riverpod
-class CallNotifier extends _$CallNotifier {
-  FirebaseHandshakeService? _handshakeService;
-  HandshakeOperations? _handshakeOperations;
-  StreamSubscription<Handshake>? _handshakeSubscription;
+class CallNotifier extends _$CallNotifier with BaseCallProvider {
   String? _currentCallerId;
   String? _currentReceiverId;
-  WebRTCService? _webrtcService;
 
   @override
   CallState build() {
-    _handshakeService = FirebaseHandshakeService();
-    _handshakeOperations = HandshakeOperations();
-    _webrtcService = FlutterWebRTCService.instance;
+    initializeServices();
     // Initialize WebRTC service asynchronously
-    _initializeWebRTCService();
+    initializeWebRTC();
     return const CallState();
-  }
-
-  /// Initialize WebRTC service
-  Future<void> _initializeWebRTCService() async {
-    if (_webrtcService != null) {
-      final result = await _webrtcService!.initialize();
-      result.fold(
-        (failure) => print('❌ Failed to initialize WebRTC service: ${failure.message}'),
-        (_) => print('✅ WebRTC service initialized successfully'),
-      );
-    }
   }
 
   void startCall() {
@@ -70,7 +51,7 @@ class CallNotifier extends _$CallNotifier {
   }) async {
     try {
       // Update Firebase status to 'close_call' using shared utility
-      await _handshakeOperations?.updateHandshakeStatus(
+      await handshakeOperations?.updateHandshakeStatus(
         callerId: callerId,
         receiverId: receiverId,
         status: 'close_call',
@@ -93,8 +74,7 @@ class CallNotifier extends _$CallNotifier {
   }
 
   void reset() {
-    _handshakeSubscription?.cancel();
-    _handshakeSubscription = null;
+    stopListening();
     state = const CallState();
   }
 
@@ -104,20 +84,17 @@ class CallNotifier extends _$CallNotifier {
     required String receiverId,
   }) async {
     try {
-
-      // Initialize WebRTC service
-
       // Create SDP and ICE for caller
-      final sdpOffer = await _createSdpOffer();
+      final sdpOffer = await createSdpOffer();
 
       // Set local description to start ICE gathering
       if (sdpOffer != null) {
-        await _webrtcService!.setLocalDescription(sdpOffer);
+        await setLocalDescription(sdpOffer);
       }
       
-      final iceCandidates = await _gatherIceCandidates();
+      final iceCandidates = await gatherIceCandidates();
 
-      await _handshakeService?.initiateHandshake(
+      await handshakeService?.initiateHandshake(
         callerId: callerId,
         receiverId: receiverId,
         sdpOffer: sdpOffer,
@@ -147,15 +124,14 @@ class CallNotifier extends _$CallNotifier {
     required String callerId,
     required String receiverId,
   }) async {
-    _handshakeSubscription?.cancel();
+    stopListening();
 
     // Store current call participants
     _currentCallerId = callerId;
     _currentReceiverId = receiverId;
 
-
     // Pass SDP and ICE values to handshake
-    _handshakeSubscription = _handshakeService!
+    handshakeSubscription = handshakeService!
         .listenToHandshake(
       callerId: callerId,
       receiverId: receiverId
@@ -177,97 +153,23 @@ class CallNotifier extends _$CallNotifier {
     );
   }
 
-  /// Create SDP offer
-  Future<RTCSessionDescription?> _createSdpOffer() async {
-    try {
-      // Create SDP offer
-      final offerResult = await _webrtcService!.createOffer();
-      RTCSessionDescription? sdpOffer;
-      
-      offerResult.fold(
-        (failure) {
-          print('❌ Failed to create offer: ${failure.message}');
-          throw Exception('SDP offer creation failed: ${failure.message}');
-        },
-        (offer) {
-          sdpOffer = offer;
-          print('✅ SDP offer created successfully');
-        },
-      );
-
-      return sdpOffer;
-    } catch (e) {
-      print('❌ Error creating SDP offer: $e');
-      return null;
-    }
-  }
-
-  /// Gather ICE candidates
-  Future<List<RTCIceCandidate>> _gatherIceCandidates() async {
-    List<RTCIceCandidate> iceCandidates = [];
-    
-    // Wait for ICE candidates to be gathered with timeout
-    const maxWaitTime = Duration(seconds: 3);
-    const checkInterval = Duration(milliseconds: 100);
-    int waitedTime = 0;
-    
-    while (waitedTime < maxWaitTime.inMilliseconds) {
-      await Future.delayed(checkInterval);
-      waitedTime += checkInterval.inMilliseconds;
-      
-      // Get current ICE candidates
-      final currentCandidates = _webrtcService!.getIceCandidates();
-      if (currentCandidates.isNotEmpty) {
-        iceCandidates = List.from(currentCandidates);
-        print('🧊 Gathered ${iceCandidates.length} ICE candidates');
-        break;
-      }
-    }
-    
-    if (iceCandidates.isEmpty) {
-      print('⚠️ No ICE candidates gathered within timeout');
-    }
-
-    return iceCandidates;
-  }
 
   /// Handle call acknowledge - set remote SDP and add ICE candidates
   Future<void> _handleCallAcknowledge(Handshake handshake) async {
     try {
-      if (_webrtcService == null) {
+      if (webrtcService == null) {
         print('❌ WebRTC service not initialized');
         return;
       }
 
       // Ensure WebRTC service is properly initialized
-      final initResult = await _webrtcService!.initialize();
-      initResult.fold(
-        (failure) {
-          print('❌ Failed to initialize WebRTC service: ${failure.message}');
-          return;
-        },
-        (_) {
-          print('✅ WebRTC service ready for call acknowledge');
-          return;
-        },
-      );
+      await initializeWebRTC();
 
       // Set remote description with receiver's SDP answer
       if (handshake.sdpAnswer != null) {
         print('📞 Setting remote description with receiver SDP answer');
         final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, 'answer');
-        final setRemoteResult = await _webrtcService!.setRemoteDescription(remoteDescription);
-        
-        setRemoteResult.fold(
-          (failure) {
-            print('❌ Failed to set remote description: ${failure.message}');
-            return;
-          },
-          (_) {
-            print('✅ Remote description set successfully');
-            return;
-          },
-        );
+        await setRemoteDescription(remoteDescription);
       } else {
         print('❌ No SDP answer received from receiver');
         return;
@@ -285,15 +187,7 @@ class CallNotifier extends _$CallNotifier {
               iceData['sdpMLineIndex'] ?? 0,
             );
             
-            final addCandidateResult = await _webrtcService!.addIceCandidate(candidate);
-            addCandidateResult.fold(
-              (failure) {
-                print('❌ Failed to add ICE candidate: ${failure.message}');
-              },
-              (_) {
-                print('✅ ICE candidate added successfully');
-              },
-            );
+            await addIceCandidate(candidate);
           } catch (e) {
             print('❌ Error processing ICE candidate: $e');
           }
@@ -303,7 +197,7 @@ class CallNotifier extends _$CallNotifier {
       }
 
       // Ensure we have local media stream for the call
-      final mediaResult = await _webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
+      final mediaResult = await webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
       if (mediaResult.isRight()) {
         print('✅ Local media stream obtained for call acknowledge');
       } else {
@@ -331,8 +225,8 @@ class CallNotifier extends _$CallNotifier {
   }
 
   /// Dispose resources
+  @override
   void dispose() {
-    _handshakeSubscription?.cancel();
-    _handshakeService?.dispose();
+    super.dispose();
   }
 }

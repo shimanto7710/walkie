@@ -2,35 +2,27 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../../domain/entities/handshake.dart';
-import '../../../../data/services/firebase_handshake_service.dart';
-import '../../../../data/services/handshake_operations.dart';
-import '../../../../data/services/webrtc_service.dart';
+import 'base_call_provider.dart';
 
 part 'global_handshake_provider.g.dart';
 
 @riverpod
-class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
-  FirebaseHandshakeService? _handshakeService;
-  HandshakeOperations? _handshakeOperations;
-  StreamSubscription<Handshake>? _handshakeSubscription;
+class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallProvider {
   String? _currentHandshakeId;
-  WebRTCService? _webrtcService;
 
   @override
   Handshake? build() {
-    _handshakeService = FirebaseHandshakeService();
-    _handshakeOperations = HandshakeOperations();
-    _webrtcService = FlutterWebRTCService.instance;
+    initializeServices();
     return null;
   }
 
 
   /// Listen to handshake changes for a specific user (as caller or receiver)
   void listenForUserHandshakes(String userId) {
-    _stopListening();
+    stopListening();
     
     // Listen to all handshakes where this user is either caller or receiver
-    _handshakeSubscription = _handshakeService!
+    handshakeSubscription = handshakeService!
         .listenToUserHandshakes(userId)
         .listen(
           (handshake) async {
@@ -42,44 +34,20 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
                 handshake.status == 'call_initiate' && 
                 !handshake.receiverIdSent) {
               
-              // Ensure WebRTC service is initialized
-              if (_webrtcService == null) {
-                print('❌ WebRTC service not initialized');
-                return;
-              }
-              
               // Initialize WebRTC service if needed
-              final initResult = await _webrtcService!.initialize();
-              initResult.fold(
-                (failure) {
-                  print('❌ Failed to initialize WebRTC: ${failure.message}');
-                  return;
-                },
-                (_) {
-                  print('✅ WebRTC service initialized');
-                  return;
-                },
-              );
+              await initializeWebRTC();
               
               // Set remote description with caller's SDP
               if (handshake.sdpOffer != null) {
                 final remoteDescription = RTCSessionDescription(handshake.sdpOffer!, 'offer');
-                await _webrtcService!.setRemoteDescription(remoteDescription);
+                await setRemoteDescription(remoteDescription);
               }
               
               // Create answer SDP
-              RTCSessionDescription? answerSdp;
-              final answerResult = await _webrtcService!.createAnswer();
-              await answerResult.fold(
-                (failure) async {
-                  print('Failed to create answer: ${failure.message}');
-                },
-                (answer) async {
-                  answerSdp = answer;
-                  print('✅ Answer SDP created: ${answer.sdp?.length ?? 0} chars');
-                  await _webrtcService!.setLocalDescription(answer);
-                },
-              );
+              final answerSdp = await createSdpAnswer();
+              if (answerSdp != null) {
+                await setLocalDescription(answerSdp);
+              }
               
               // Add caller's ICE candidates
               if (handshake.iceCandidates != null) {
@@ -89,17 +57,13 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
                     iceData['sdpMid'] ?? '0',
                     iceData['sdpMLineIndex'] ?? 0,
                   );
-                  await _webrtcService!.addIceCandidate(candidate);
+                  await addIceCandidate(candidate);
                 }
                 print('🧊 Added ${handshake.iceCandidates!.length} ICE candidates from caller');
               }
               
-              // Wait longer for receiver's ICE candidates to be generated
-              print('⏳ Waiting for ICE candidates to be generated...');
-              await Future.delayed(const Duration(milliseconds: 2000));
-              
               // Get receiver's ICE candidates
-              final receiverIceCandidates = _webrtcService!.getIceCandidates();
+              final receiverIceCandidates = await gatherIceCandidates();
 
 
               // Only proceed if we have valid data
@@ -128,7 +92,7 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
   Future<void> _handleIncomingCall(Handshake handshake, RTCSessionDescription? answerSdp, List<RTCIceCandidate> receiverIceCandidates) async {
     try {
       // Update Firebase status and receiverIdSent in a single operation using shared utility
-      await _handshakeOperations?.updateHandshakeStatusAndReceiverSent(
+      await handshakeOperations?.updateHandshakeStatusAndReceiverSent(
         callerId: handshake.callerId,
         receiverId: handshake.receiverId,
         status: 'call_acknowledge',
@@ -146,22 +110,16 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier {
     }
   }
 
-  /// Stop listening to handshake changes
-  void _stopListening() {
-    _handshakeSubscription?.cancel();
-    _handshakeSubscription = null;
-  }
-
   /// Stop listening and reset state
-  void stopListening() {
-    _stopListening();
+  void stopListeningAndReset() {
+    stopListening();
     _currentHandshakeId = null;
     state = null;
   }
 
   /// Dispose resources
+  @override
   void dispose() {
-    _stopListening();
-    _handshakeService?.dispose();
+    super.dispose();
   }
 }
