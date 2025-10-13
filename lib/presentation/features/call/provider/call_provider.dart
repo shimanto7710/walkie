@@ -86,18 +86,19 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     required String receiverId,
   }) async {
     try {
-      Utils.log('Caller', 'Initiating handshake between $callerId and $receiverId');
+      Utils.log('Caller', '$callerId Initiating handshake between $callerId and $receiverId');
       // Create SDP and ICE for caller
       final sdpOffer = await createSdpOffer();
 
       // Set local description to start ICE gathering
       if (sdpOffer != null) {
-        Utils.log('Caller', 'SDP Offer: ${sdpOffer.sdp}');
-        Utils.log('Caller', 'Setting local description with SDP offer');
+        Utils.log('Caller', '$callerId Local SDP Offer: ${sdpOffer.sdp}');
+        Utils.log('Caller', '$callerId Setting local description with SDP offer');
         await setLocalDescription(sdpOffer);
       }
       
       final iceCandidates = await gatherIceCandidates();
+      Utils.log('Caller', '$callerId Gathered ${iceCandidates.length} ICE candidates');
 
       await handshakeService?.initiateHandshake(
         callerId: callerId,
@@ -109,9 +110,9 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
       // Start listening to handshake changes
       _startListening(callerId: callerId, receiverId: receiverId);
 
-      Utils.log('Caller', 'Handshake initiated successfully between $callerId and $receiverId');
+      Utils.log('Caller', '$callerId Handshake initiated successfully between $callerId and $receiverId');
     } catch (e) {
-      print('❌ Error initiating handshake: $e');
+      Utils.log('Caller', '$callerId Error initiating handshake: $e');
       rethrow;
     }
   }
@@ -121,6 +122,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     required String callerId,
     required String receiverId,
   }) {
+    Utils.log('Caller', '$callerId Starting to listen to handshake between $callerId and $receiverId');
     _startListening(callerId: callerId, receiverId: receiverId);
   }
 
@@ -152,7 +154,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
         }
       },
       onError: (error) {
-        print('❌ Handshake stream error: $error');
+        Utils.log('Caller', 'Error listening to handshake: $error');
       },
     );
   }
@@ -171,7 +173,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
 
       // Set remote description with receiver's SDP answer
       if (handshake.sdpAnswer != null) {
-        Utils.log('Caller', 'Setting remote description with SDP answer '+handshake.sdpAnswer!);
+        Utils.log('Caller', '${handshake.callerId} Setting remote description with SDP answer '+handshake.sdpAnswer!);
         final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, 'answer');
         await setRemoteDescription(remoteDescription);
       } else {
