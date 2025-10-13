@@ -92,7 +92,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
 
       // Set local description to start ICE gathering
       if (sdpOffer != null) {
-        Utils.log('Caller', '$callerId Local SDP Offer: ${sdpOffer.sdp}');
+        // Utils.log('Caller', '$callerId Local SDP Offer: ${sdpOffer.sdp}');
         Utils.log('Caller', '$callerId Setting local description with SDP offer');
         await setLocalDescription(sdpOffer);
       }
@@ -181,7 +181,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
   Future<void> _handleCallAcknowledge(Handshake handshake) async {
     try {
       if (webrtcService == null) {
-        print('❌ WebRTC service not initialized');
+        Utils.log('Caller', 'WebRTC service not initialized');
         return;
       }
 
@@ -190,7 +190,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
 
       // Set remote description with receiver's SDP answer
       if (handshake.sdpAnswer != null) {
-        Utils.log('Caller', '${handshake.callerId} Setting remote description with SDP answer '+handshake.sdpAnswer!);
+        // Utils.log('Caller', '${handshake.callerId} Setting remote description with SDP answer '+handshake.sdpAnswer!);
         final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, 'answer');
         await setRemoteDescription(remoteDescription);
       } else {

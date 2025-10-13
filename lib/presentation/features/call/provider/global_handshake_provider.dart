@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../../domain/entities/handshake.dart';
+import '../../../../core/utils/Utils.dart';
 import 'base_call_provider.dart';
 
 part 'global_handshake_provider.g.dart';
@@ -58,7 +59,7 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
                   );
                   await addIceCandidate(candidate);
                 }
-                print('🧊 Added ${handshake.iceCandidates!.length} ICE candidates from caller');
+                Utils.log('Receiver', 'Added ${handshake.iceCandidates!.length} ICE candidates from caller');
               }
               
               // Get receiver's ICE candidates
@@ -68,25 +69,25 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
               final addStreamResult = await webrtcService?.addLocalStreamToPeerConnection();
               addStreamResult?.fold(
                 (failure) {
-                  print('❌ Failed to add local stream to peer connection: ${failure.message}');
+                  Utils.log('Receiver', 'Failed to add local stream to peer connection: ${failure.message}');
                 },
                 (_) {
-                  print('✅ Local audio stream added to peer connection for incoming call');
+                  Utils.log('Receiver', 'Local audio stream added to peer connection for incoming call');
                 },
               );
 
               // Call is now ready - SDP and ICE exchange completed
-              print('📞 Incoming call is ready - SDP and ICE exchange completed');
+              Utils.log('Receiver', 'Incoming call is ready - SDP and ICE exchange completed');
 
               // Now initiate the actual call using WebRTC service
-              print('🚀 Initiating incoming call...');
+              Utils.log('Receiver', 'Initiating incoming call...');
               final callResult = await webrtcService?.acceptCall();
               callResult?.fold(
                 (failure) {
-                  print('❌ Failed to accept call: ${failure.message}');
+                  Utils.log('Receiver', 'Failed to accept call: ${failure.message}');
                 },
                 (_) {
-                  print('✅ Incoming call accepted successfully');
+                  Utils.log('Receiver', 'Incoming call accepted successfully');
                 },
               );
 
@@ -95,19 +96,19 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
                 // Update Firebase: change status to 'call_acknowledge' and set receiverIdSent to true
                 _handleIncomingCall(handshake, answerSdp, receiverIceCandidates);
               } else {
-                print('❌ Cannot proceed: Answer SDP is missing');
+                Utils.log('Receiver', 'Cannot proceed: Answer SDP is missing');
               }
             }
             
             // Handle close_call status for both caller and receiver
             if (handshake.status == 'close_call' && 
                 (handshake.callerId == userId || handshake.receiverId == userId)) {
-              print('🌍 Close call detected in global provider for user: $userId');
+              Utils.log('Receiver', 'Close call detected in global provider for user: $userId');
               // The call screen will handle the actual call ending
             }
           },
           onError: (error) {
-            print('❌ User handshake stream error: $error');
+            Utils.log('Receiver', 'User handshake stream error: $error');
           },
         );
   }
@@ -130,7 +131,7 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
       // The provider just updates the state, UI listens and navigates
       
     } catch (e) {
-      print('❌ Error handling incoming call: $e');
+      Utils.log('Receiver', 'Error handling incoming call: $e');
     }
   }
 

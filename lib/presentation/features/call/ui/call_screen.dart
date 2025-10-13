@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/utils/permissions_helper.dart';
+import '../../../../core/utils/Utils.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
@@ -111,7 +112,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
       // Note: ref.listen calls are now handled in the build method
 
     } catch (e) {
-      print('❌ Error initializing WebRTC: $e');
+      Utils.log('Call', 'Error initializing WebRTC: $e');
       _showErrorDialog('Failed to initialize call: $e');
     }
   }
@@ -166,8 +167,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
         final callNotifier = ref.read(callNotifierProvider.notifier);
         
         if (widget.isIncomingCall) {
-          print('📞 Incoming call detected - starting to listen for handshake changes');
-          print('📞 Handshake ID: ${widget.handshakeId}');
+          Utils.log('Receiver', 'Incoming call detected - starting to listen for handshake changes');
+          Utils.log('Receiver', 'Handshake ID: ${widget.handshakeId}');
           
           // For incoming calls, just start listening without initializing
           // Extract caller and receiver from handshakeId or use friend.id as caller
@@ -187,11 +188,11 @@ class _CallScreenState extends ConsumerState<CallScreen>
             receiverId: widget.friend.id,
           );
           
-          print('✅ Firebase handshake initialized for outgoing call');
+          Utils.log('Caller', 'Firebase handshake initialized for outgoing call');
         }
       }
     } catch (e) {
-      print('❌ Error initializing handshake: $e');
+      Utils.log('Call', 'Error initializing handshake: $e');
     }
   }
 
@@ -221,30 +222,17 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   void _onHoldStart() {
-    print('🔍 === HOLD START DEBUG ===');
-    print('🔍 Hold started - _isHolding: $_isHolding');
-    print('🔍 _isCallSustained: $_isCallSustained');
-    print('🔍 _isSwipeGesture: $_isSwipeGesture');
-    
     setState(() {
       _isHolding = true;
     });
-    
-    print('🔍 State updated - _isHolding: $_isHolding');
     
     // Start talking - enable microphone with delay to ensure UI is updated
     Future.delayed(const Duration(milliseconds: 100), () {
       _toggleMicrophone(true);
     });
-    print('🎤 Push-to-talk: STARTED talking');
-    print('🔍 === END HOLD START DEBUG ===');
   }
 
   void _onHoldEnd() {
-    print('🔍 === HOLD END DEBUG ===');
-    print('🔍 Hold ended - _isHolding: $_isHolding');
-    print('🔍 _isCallSustained: $_isCallSustained');
-    print('🔍 _isSwipeGesture: $_isSwipeGesture');
     
     // Mic button should ALWAYS work as push-to-talk toggle
     // Never ends the call, regardless of call state (sustained or not)
@@ -253,84 +241,64 @@ class _CallScreenState extends ConsumerState<CallScreen>
         _isHolding = false;
       });
       
-      print('🔍 State updated - _isHolding: $_isHolding');
       
       // Stop talking - disable microphone with delay
       Future.delayed(const Duration(milliseconds: 100), () {
         _toggleMicrophone(false);
       });
-      print('🎤 Push-to-talk: STOPPED talking');
     } else {
-      print('🔍 Hold end ignored - swipe gesture in progress');
     }
-    print('🔍 === END HOLD END DEBUG ===');
   }
 
   /// Toggle microphone on/off for push-to-talk
   void _toggleMicrophone(bool isEnabled) async {
     try {
-      print('🔍 === MICROPHONE DEBUG ===');
-      print('🔍 Attempting to ${isEnabled ? "ENABLE" : "DISABLE"} microphone');
       
       // Try WebRTC approach first
       bool webrtcSuccess = false;
       try {
         final webrtcService = FlutterWebRTCService.instance;
-        print('🔍 WebRTC service instance: Found');
         
         // Print current WebRTC state safely
         try {
           webrtcService.printDebugInfo();
         } catch (e) {
-          print('⚠️ Error printing debug info: $e');
         }
         
         // Call toggleMute with timeout
-        print('🔍 Calling toggleMute() with timeout...');
         final result = await webrtcService.toggleMute().timeout(
           const Duration(seconds: 5),
           onTimeout: () {
-            print('⏰ toggleMute() timed out');
             return Left(Failure.unknownFailure('Operation timed out'));
           },
         );
         
         result.fold(
           (failure) {
-            print('❌ WebRTC toggle failed: ${failure.message}');
             webrtcSuccess = false;
           },
           (_) {
-            print('✅ WebRTC microphone toggled successfully');
             webrtcSuccess = true;
           },
         );
         
       } catch (e) {
-        print('❌ WebRTC approach failed: $e');
         webrtcSuccess = false;
       }
       
       // If WebRTC failed, try simple approach
       if (!webrtcSuccess) {
-        print('🔍 WebRTC failed, trying simple approach...');
         try {
           // Just update UI state without WebRTC
           setState(() {
             // Update visual state only
-            print('🔍 Updated UI state for microphone toggle');
           });
-          print('✅ Simple microphone toggle completed');
         } catch (e) {
-          print('❌ Simple approach also failed: $e');
         }
       }
       
-      print('🔍 === END MICROPHONE DEBUG ===');
       
     } catch (e) {
-      print('❌ Unexpected error in _toggleMicrophone(): $e');
-      print('❌ Stack trace: ${StackTrace.current}');
       // Don't rethrow the error to prevent app crash
     }
   }
@@ -382,7 +350,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
   Widget build(BuildContext context) {
     // Listen to simple call state changes
     ref.listen<CallState>(callNotifierProvider, (previous, next) {
-      print('📞 Call state changed: ${previous?.status} -> ${next.status}');
+      Utils.log('Call', 'Call state changed: ${previous?.status} -> ${next.status}');
       
       if (next.status == CallStatus.connected) {
         setState(() {
@@ -390,7 +358,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
         });
       } else if (next.status == CallStatus.ended) {
         // Navigate to home when call ends (either by user action or remote close)
-        print('📞 Call ended - navigating to home');
+        Utils.log('Call', 'Call ended - navigating to home');
         context.go('/home');
       }
     });
@@ -435,7 +403,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                print('🔙 Back button pressed - ending call');
                 _endCall();
               },
               borderRadius: BorderRadius.circular(20),
@@ -641,50 +608,29 @@ class _CallScreenState extends ConsumerState<CallScreen>
           // Hold to talk button
           Listener(
             onPointerDown: (details) {
-              print('🔍 === POINTER DOWN DEBUG ===');
-              print('🔍 onPointerDown detected at: ${details.position}');
-              print('🔍 _isCallSustained: $_isCallSustained');
-              print('🔍 _isHolding: $_isHolding');
-              print('🔍 _isSwipeGesture: $_isSwipeGesture');
-              print('🔍 Calling _onHoldStart()...');
               _onHoldStart();
-              print('🔍 === END POINTER DOWN DEBUG ===');
             },
             onPointerUp: (details) {
-              print('🔍 === POINTER UP DEBUG ===');
-              print('🔍 onPointerUp detected at: ${details.position}');
-              print('🔍 _isCallSustained: $_isCallSustained');
-              print('🔍 _isHolding: $_isHolding');
-              print('🔍 _isSwipeGesture: $_isSwipeGesture');
               
               if (!_isSwipeGesture) {
-                print('🔍 Calling _onHoldEnd()...');
                 _onHoldEnd();
               } else {
-                print('🔍 onPointerUp ignored - swipe gesture in progress');
               }
-              print('🔍 === END POINTER UP DEBUG ===');
             },
             onPointerCancel: (details) {
-              print('🔍 === POINTER CANCEL DEBUG ===');
-              print('🔍 onPointerCancel detected at: ${details.position}');
-              print('🔍 _isCallSustained: $_isCallSustained');
-              print('🔍 _isHolding: $_isHolding');
-              print('🔍 _isSwipeGesture: $_isSwipeGesture');
+
               
               if (!_isSwipeGesture) {
-                print('🔍 Calling _onHoldEnd()...');
+
                 _onHoldEnd();
               } else {
-                print('🔍 onPointerCancel ignored - swipe gesture in progress');
+
               }
-              print('🔍 === END POINTER CANCEL DEBUG ===');
+              
             },
             onPointerMove: (details) {
-              print('🎤 onPointerMove - delta: ${details.delta.dy}, _isHolding: $_isHolding, _isCallSustained: $_isCallSustained');
               // Check for swipe up gesture
               if (details.delta.dy < -10 && _isHolding && !_isCallSustained) {
-                print('⬆️ Swipe up detected - delta: ${details.delta.dy}');
                 _onSwipeUp();
               }
             },

@@ -72,7 +72,6 @@ class FlutterWebRTCService implements WebRTCService {
   Future<Either<Failure, void>> initialize() async {
     try {
       if (_isInitialized) {
-        print('⚠️ WebRTC service already initialized, resetting...');
         final resetResult = await reset();
         if (resetResult.isLeft()) {
           return resetResult;
@@ -114,7 +113,6 @@ class FlutterWebRTCService implements WebRTCService {
   }
 
   Future<void> _createPeerConnection() async {
-    print('🔧 Creating peer connection...');
     
     final configuration = <String, dynamic>{
       'iceServers': [
@@ -134,18 +132,13 @@ class FlutterWebRTCService implements WebRTCService {
   }
 
   void _setupPeerConnectionListeners() {
-    print('🔧 Setting up peer connection listeners...');
     
     _peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
-      print('🧊 ICE candidate received: ${candidate.candidate}');
-      print('🧊 ICE candidate sdpMid: ${candidate.sdpMid}, sdpMLineIndex: ${candidate.sdpMLineIndex}');
       _iceCandidates.add(candidate);
       _iceCandidateController.add(candidate);
-      print('🧊 Total ICE candidates collected: ${_iceCandidates.length}');
     };
 
     _peerConnection?.onAddStream = (MediaStream stream) {
-      print('Remote stream added');
       _remoteStream = stream;
       _updateConnectionState(_currentState.copyWith(
         isRemoteAudioEnabled: stream.getAudioTracks().isNotEmpty,
@@ -153,7 +146,6 @@ class FlutterWebRTCService implements WebRTCService {
     };
 
     _peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
-      print('Connection state: $state');
       WebRTCConnectionStatus status;
       switch (state) {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
@@ -230,7 +222,6 @@ class FlutterWebRTCService implements WebRTCService {
         if (addStreamResult.isLeft()) {
           return addStreamResult;
         }
-        print('✅ Local audio stream added to peer connection');
       }
 
       _updateConnectionState(_currentState.copyWith(
@@ -266,7 +257,6 @@ class FlutterWebRTCService implements WebRTCService {
         if (addStreamResult.isLeft()) {
           return addStreamResult;
         }
-        print('✅ Local audio stream added to peer connection');
       }
       
       _updateConnectionState(_currentState.copyWith(
@@ -311,78 +301,55 @@ class FlutterWebRTCService implements WebRTCService {
   @override
   Future<Either<Failure, void>> toggleMute() async {
     try {
-      print('🔍 === TOGGLE MUTE START ===');
-      print('🔍 _localStream: ${_localStream != null ? "Available" : "NULL"}');
-      print('🔍 _isInitialized: $_isInitialized');
-      print('🔍 _peerConnection: ${_peerConnection != null ? "Available" : "NULL"}');
       
       // Step 1: Check and request permissions first
-      print('🔍 Step 1: Checking microphone permissions...');
       final permissionResult = await _requestPermissions();
       if (permissionResult.isLeft()) {
-        print('❌ Microphone permission denied or failed');
         return Left(Failure.unknownFailure('Microphone permission required'));
       }
-      print('✅ Microphone permission granted');
       
       // Step 2: Ensure WebRTC is initialized
       if (!_isInitialized) {
-        print('🔍 Step 2: Initializing WebRTC...');
         final initResult = await initialize();
         if (initResult.isLeft()) {
-          print('❌ Failed to initialize WebRTC');
           return Left(Failure.unknownFailure('WebRTC initialization failed'));
         }
-        print('✅ WebRTC initialized');
       } else {
-        print('✅ WebRTC already initialized');
       }
       
       // Step 3: Ensure we have a local stream
       if (_localStream == null) {
-        print('🔍 Step 3: Getting user media...');
         final mediaResult = await getUserMedia(const WebRTCMediaConstraints(audio: true));
         if (mediaResult.isLeft()) {
-          print('❌ Failed to get user media: ${mediaResult.fold((l) => l.message, (r) => '')}');
           return Left(Failure.unknownFailure('Failed to access microphone'));
         }
-        print('✅ User media obtained');
         
         // Add stream to peer connection
         final addStreamResult = await addLocalStreamToPeerConnection();
         if (addStreamResult.isLeft()) {
-          print('⚠️ Failed to add stream to peer connection: ${addStreamResult.fold((l) => l.message, (r) => '')}');
         } else {
-          print('✅ Stream added to peer connection');
         }
       } else {
-        print('✅ Local stream already available');
       }
       
       // Step 4: Final validation
       if (_localStream == null) {
-        print('❌ Local stream still null after all attempts');
         return Left(Failure.unknownFailure('Microphone not available'));
       }
       
       // Step 5: Get and validate audio tracks
-      print('🔍 Step 5: Getting audio tracks...');
       List<MediaStreamTrack> audioTracks;
       try {
         audioTracks = _localStream!.getAudioTracks();
-        print('🔍 Found ${audioTracks.length} audio tracks');
       } catch (e) {
-        print('❌ Error getting audio tracks: $e');
         return Left(Failure.unknownFailure('Failed to access audio tracks'));
       }
       
       if (audioTracks.isEmpty) {
-        print('❌ No audio tracks available');
         return Left(Failure.unknownFailure('No audio tracks found'));
       }
       
       // Step 6: Toggle audio tracks with maximum safety
-      print('🔍 Step 6: Toggling audio tracks...');
       bool anySuccess = false;
       
       for (int i = 0; i < audioTracks.length; i++) {
@@ -391,22 +358,18 @@ class FlutterWebRTCService implements WebRTCService {
           final currentState = track.enabled;
           final newState = !currentState;
           
-          print('🔍 Track $i: $currentState -> $newState');
           
           // Track is already validated in the loop, no need to check for null
           
           track.enabled = newState;
           anySuccess = true;
-          print('✅ Track $i toggled successfully');
           
         } catch (e) {
-          print('⚠️ Error toggling track $i: $e');
           // Continue with other tracks
         }
       }
       
       if (!anySuccess) {
-        print('❌ Failed to toggle any audio tracks');
         return Left(Failure.unknownFailure('Failed to toggle microphone'));
       }
       
@@ -416,19 +379,13 @@ class FlutterWebRTCService implements WebRTCService {
           isMuted: !_currentState.isMuted,
           isLocalAudioEnabled: !_currentState.isMuted,
         ));
-        print('✅ State updated - isMuted: ${_currentState.isMuted}');
       } catch (e) {
-        print('⚠️ Error updating state: $e');
         // Don't fail the operation for state update error
       }
 
-      print('✅ === TOGGLE MUTE SUCCESS ===');
       return const Right(null);
       
     } catch (e) {
-      print('❌ === TOGGLE MUTE CRASH ===');
-      print('❌ Error: $e');
-      print('❌ Stack trace: ${StackTrace.current}');
       return Left(Failure.unknownFailure('Microphone toggle failed: $e'));
     }
   }
@@ -466,13 +423,9 @@ class FlutterWebRTCService implements WebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
-      print('📞 Creating SDP offer...');
       final offer = await _peerConnection!.createOffer();
-      print('✅ SDP offer created: ${offer.sdp?.length ?? 0} characters');
-      print('📞 Offer type: ${offer.type}');
       return Right(offer);
     } catch (e) {
-      print('❌ Failed to create offer: $e');
       return Left(Failure.unknownFailure('Failed to create offer: $e'));
     }
   }
@@ -484,13 +437,9 @@ class FlutterWebRTCService implements WebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
-      print('📞 Creating SDP answer...');
       final answer = await _peerConnection!.createAnswer();
-      print('✅ SDP answer created: ${answer.sdp?.length ?? 0} characters');
-      print('📞 Answer type: ${answer.type}');
       return Right(answer);
     } catch (e) {
-      print('❌ Failed to create answer: $e');
       return Left(Failure.unknownFailure('Failed to create answer: $e'));
     }
   }
@@ -502,13 +451,9 @@ class FlutterWebRTCService implements WebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
-      print('📞 Setting local description: ${description.type}');
-      print('📞 Local SDP length: ${description.sdp?.length ?? 0} characters');
       await _peerConnection!.setLocalDescription(description);
-      print('✅ Local description set successfully');
       return const Right(null);
     } catch (e) {
-      print('❌ Failed to set local description: $e');
       return Left(Failure.unknownFailure('Failed to set local description: $e'));
     }
   }
@@ -519,14 +464,10 @@ class FlutterWebRTCService implements WebRTCService {
       if (_peerConnection == null) {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
-      
-      print('📞 Setting remote description: ${description.type}');
-      print('📞 Remote SDP length: ${description.sdp?.length ?? 0} characters');
+
       await _peerConnection!.setRemoteDescription(description);
-      print('✅ Remote description set successfully');
       return const Right(null);
     } catch (e) {
-      print('❌ Failed to set remote description: $e');
       return Left(Failure.unknownFailure('Failed to set remote description: $e'));
     }
   }
@@ -547,13 +488,9 @@ class FlutterWebRTCService implements WebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
-      print('🧊 Adding ICE candidate: ${candidate.candidate}');
-      print('🧊 ICE candidate sdpMid: ${candidate.sdpMid}, sdpMLineIndex: ${candidate.sdpMLineIndex}');
       await _peerConnection!.addCandidate(candidate);
-      print('✅ ICE candidate added successfully');
       return const Right(null);
     } catch (e) {
-      print('❌ Failed to add ICE candidate: $e');
       return Left(Failure.unknownFailure('Failed to add ICE candidate: $e'));
     }
   }
@@ -561,7 +498,6 @@ class FlutterWebRTCService implements WebRTCService {
   @override
   Future<Either<Failure, void>> reset() async {
     try {
-      print('🔄 Resetting WebRTC service...');
       
       // Close existing peer connection
       if (_peerConnection != null) {
@@ -585,10 +521,8 @@ class FlutterWebRTCService implements WebRTCService {
         isInitialized: true,
       ));
       
-      print('✅ WebRTC service reset successfully');
       return const Right(null);
     } catch (e) {
-      print('❌ Failed to reset WebRTC service: $e');
       return Left(Failure.unknownFailure('Failed to reset WebRTC service: $e'));
     }
   }
@@ -608,10 +542,8 @@ class FlutterWebRTCService implements WebRTCService {
       final audioTracks = _localStream!.getAudioTracks();
       for (final track in audioTracks) {
         await _peerConnection!.addTrack(track, _localStream!);
-        print('✅ Audio track added to peer connection: ${track.id}');
       }
       
-      print('✅ All local audio tracks added to peer connection');
       
       return const Right(null);
     } catch (e) {
@@ -621,36 +553,18 @@ class FlutterWebRTCService implements WebRTCService {
 
   /// Debug method to print current WebRTC state
   void printDebugInfo() {
-    print('🔍 === WebRTC Debug Info ===');
-    print('🔍 Initialized: $_isInitialized');
-    print('🔍 Peer Connection: ${_peerConnection != null ? "Created" : "Null"}');
-    print('🔍 ICE Candidates: ${_iceCandidates.length}');
-    print('🔍 Local Stream: ${_localStream != null ? "Active" : "Null"}');
-    print('🔍 Remote Stream: ${_remoteStream != null ? "Active" : "Null"}');
-    print('🔍 Current State: ${_currentState.status}');
     if (_peerConnection != null) {
-      print('🔍 Signaling State: ${_peerConnection!.signalingState}');
-      print('🔍 Connection State: ${_peerConnection!.connectionState}');
     }
-    print('🔍 === End Debug Info ===');
   }
 
   /// Debug method to check ICE candidate stream
   void debugIceCandidateStream() {
-    print('🔍 === ICE CANDIDATE STREAM DEBUG ===');
-    print('🔍 Stream Controller Closed: ${_iceCandidateController.isClosed}');
-    print('🔍 Stream Has Listener: ${_iceCandidateController.hasListener}');
-    print('🔍 Current ICE Candidates Count: ${_iceCandidates.length}');
     
     if (_iceCandidates.isNotEmpty) {
-      print('🔍 ICE Candidates Details:');
       for (int i = 0; i < _iceCandidates.length; i++) {
         final candidate = _iceCandidates[i];
-        print('   🧊 Candidate ${i + 1}: ${candidate.candidate}');
-        print('   🏷️  SDP Mid: ${candidate.sdpMid}, Index: ${candidate.sdpMLineIndex}');
       }
     }
-    print('🔍 === END ICE STREAM DEBUG ===');
   }
 
   @override

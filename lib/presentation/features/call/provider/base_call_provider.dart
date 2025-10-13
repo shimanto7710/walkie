@@ -37,41 +37,41 @@ mixin BaseCallProvider {
     if (_webrtcService != null) {
       final result = await _webrtcService!.initialize();
       result.fold(
-        (failure) => print('❌ Failed to initialize WebRTC service: ${failure.message}'),
-        (_) => print('✅ WebRTC service initialized successfully'),
+        (failure) => Utils.log('WebRTC', 'Failed to initialize WebRTC service: ${failure.message}'),
+        (_) => Utils.log('WebRTC', 'WebRTC service initialized successfully'),
       );
     }
   }
 
   /// Handle WebRTC errors consistently
   void handleWebRTCError(String operation, dynamic error) {
-    print('❌ WebRTC $operation error: $error');
+    Utils.log('WebRTC', 'WebRTC $operation error: $error');
   }
 
   /// Create SDP offer with error handling
   Future<RTCSessionDescription?> createSdpOffer() async {
     try {
       if (_webrtcService == null) {
-        print('❌ WebRTC service not initialized');
+        Utils.log('WebRTC', 'WebRTC service not initialized');
         return null;
       }
 
-      print('🔍 === SDP OFFER CREATION ===');
+      Utils.log('WebRTC', '=== SDP OFFER CREATION ===');
       final offerResult = await _webrtcService!.createOffer();
       RTCSessionDescription? sdpOffer;
       
       offerResult.fold(
         (failure) {
-          print('❌ Failed to create offer: ${failure.message}');
+          Utils.log('WebRTC', 'Failed to create offer: ${failure.message}');
           throw Exception('SDP offer creation failed: ${failure.message}');
         },
         (offer) {
           sdpOffer = offer;
-          print('✅ SDP offer created successfully');
-          print('📄 SDP Type: ${offer.type}');
-          print('📄 SDP Length: ${offer.sdp?.length ?? 0} characters');
-          print('📄 SDP Preview: ${offer.sdp?.substring(0, 100)}...');
-          print('🔍 === END SDP OFFER ===');
+          Utils.log('WebRTC', 'SDP offer created successfully');
+          Utils.log('WebRTC', 'SDP Type: ${offer.type}');
+          Utils.log('WebRTC', 'SDP Length: ${offer.sdp?.length ?? 0} characters');
+          Utils.log('WebRTC', 'SDP Preview: ${offer.sdp?.substring(0, 100)}...');
+          Utils.log('WebRTC', '=== END SDP OFFER ===');
         },
       );
 
@@ -86,26 +86,26 @@ mixin BaseCallProvider {
   Future<RTCSessionDescription?> createSdpAnswer() async {
     try {
       if (_webrtcService == null) {
-        print('❌ WebRTC service not initialized');
+        Utils.log('WebRTC', 'WebRTC service not initialized');
         return null;
       }
 
-      print('🔍 === SDP ANSWER CREATION ===');
+      Utils.log('WebRTC', '=== SDP ANSWER CREATION ===');
       final answerResult = await _webrtcService!.createAnswer();
       RTCSessionDescription? sdpAnswer;
       
       answerResult.fold(
         (failure) {
-          print('❌ Failed to create answer: ${failure.message}');
+          Utils.log('WebRTC', 'Failed to create answer: ${failure.message}');
           throw Exception('SDP answer creation failed: ${failure.message}');
         },
         (answer) {
           sdpAnswer = answer;
-          print('✅ SDP answer created successfully');
-          print('📄 SDP Type: ${answer.type}');
-          print('📄 SDP Length: ${answer.sdp?.length ?? 0} characters');
-          print('📄 SDP Preview: ${answer.sdp?.substring(0, 100)}...');
-          print('🔍 === END SDP ANSWER ===');
+          Utils.log('WebRTC', 'SDP answer created successfully');
+          Utils.log('WebRTC', 'SDP Type: ${answer.type}');
+          Utils.log('WebRTC', 'SDP Length: ${answer.sdp?.length ?? 0} characters');
+          Utils.log('WebRTC', 'SDP Preview: ${answer.sdp?.substring(0, 100)}...');
+          Utils.log('WebRTC', '=== END SDP ANSWER ===');
         },
       );
 
@@ -125,8 +125,8 @@ mixin BaseCallProvider {
       return iceCandidates;
     }
     
-    print('🔍 === ICE CANDIDATE GATHERING ===');
-    print('⏳ Starting ICE candidate gathering...');
+    Utils.log('WebRTC', '=== ICE CANDIDATE GATHERING ===');
+    Utils.log('WebRTC', 'Starting ICE candidate gathering...');
     
     // Wait for ICE candidates to be gathered with timeout
     const maxWaitTime = Duration(seconds: 3);
@@ -141,25 +141,25 @@ mixin BaseCallProvider {
       final currentCandidates = _webrtcService!.getIceCandidates();
       if (currentCandidates.isNotEmpty) {
         iceCandidates = List.from(currentCandidates);
-        print('✅ Gathered ${iceCandidates.length} ICE candidates');
+        Utils.log('WebRTC', 'Gathered ${iceCandidates.length} ICE candidates');
         
         // Log details of each ICE candidate
         for (int i = 0; i < iceCandidates.length; i++) {
           final candidate = iceCandidates[i];
-          print('🧊 ICE Candidate ${i + 1}:');
-          print('   📍 Candidate: ${candidate.candidate}');
-          print('   🏷️  SDP Mid: ${candidate.sdpMid}');
-          print('   🔢 SDP MLine Index: ${candidate.sdpMLineIndex}');
+          Utils.log('WebRTC', 'ICE Candidate ${i + 1}:');
+          Utils.log('WebRTC', '   Candidate: ${candidate.candidate}');
+          Utils.log('WebRTC', '   SDP Mid: ${candidate.sdpMid}');
+          Utils.log('WebRTC', '   SDP MLine Index: ${candidate.sdpMLineIndex}');
         }
         break;
       }
     }
     
     if (iceCandidates.isEmpty) {
-      print('⚠️ No ICE candidates gathered within ${maxWaitTime.inSeconds}s timeout');
+      Utils.log('WebRTC', 'No ICE candidates gathered within ${maxWaitTime.inSeconds}s timeout');
     }
     
-    print('🔍 === END ICE GATHERING ===');
+    Utils.log('WebRTC', '=== END ICE GATHERING ===');
     return iceCandidates;
   }
 
@@ -167,18 +167,18 @@ mixin BaseCallProvider {
   Future<bool> setLocalDescription(RTCSessionDescription description) async {
     try {
       if (_webrtcService == null) {
-        print('❌ WebRTC service not initialized');
+        Utils.log('WebRTC', 'WebRTC service not initialized');
         return false;
       }
 
       final result = await _webrtcService!.setLocalDescription(description);
       return result.fold(
         (failure) {
-          print('❌ Failed to set local description: ${failure.message}');
+          Utils.log('WebRTC', 'Failed to set local description: ${failure.message}');
           return false;
         },
         (_) {
-          print('✅ Local description set successfully');
+          Utils.log('WebRTC', 'Local description set successfully');
           return true;
         },
       );
@@ -192,18 +192,18 @@ mixin BaseCallProvider {
   Future<bool> setRemoteDescription(RTCSessionDescription description) async {
     try {
       if (_webrtcService == null) {
-        print('❌ WebRTC service not initialized');
+        Utils.log('WebRTC', 'WebRTC service not initialized');
         return false;
       }
 
       final result = await _webrtcService!.setRemoteDescription(description);
       return result.fold(
         (failure) {
-          print('❌ Failed to set remote description: ${failure.message}');
+          Utils.log('WebRTC', 'Failed to set remote description: ${failure.message}');
           return false;
         },
         (_) {
-          print('✅ Remote description set successfully');
+          Utils.log('WebRTC', 'Remote description set successfully');
           return true;
         },
       );
@@ -217,18 +217,18 @@ mixin BaseCallProvider {
   Future<bool> addIceCandidate(RTCIceCandidate candidate) async {
     try {
       if (_webrtcService == null) {
-        print('❌ WebRTC service not initialized');
+        Utils.log('WebRTC', 'WebRTC service not initialized');
         return false;
       }
 
       final result = await _webrtcService!.addIceCandidate(candidate);
       return result.fold(
         (failure) {
-          print('❌ Failed to add ICE candidate: ${failure.message}');
+          Utils.log('WebRTC', 'Failed to add ICE candidate: ${failure.message}');
           return false;
         },
         (_) {
-          print('✅ ICE candidate added successfully');
+          Utils.log('WebRTC', 'ICE candidate added successfully');
           return true;
         },
       );
@@ -240,7 +240,7 @@ mixin BaseCallProvider {
 
   /// Stop listening to handshake changes
   void stopListening() {
-    Utils.log('Caller', 'Stopping handshake listener');
+    Utils.log('Handshake', 'Stopping handshake listener');
     _handshakeSubscription?.cancel();
     _handshakeSubscription = null;
   }

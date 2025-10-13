@@ -91,7 +91,7 @@ class FirebaseHandshakeService {
         final data = event.snapshot.value;
         if (data is Map) {
           try{
-            print('🔍 Raw Firebase data: $data');
+            // print('🔍 Raw Firebase data: $data');
             final handshake = Handshake.fromMap(Map<String, dynamic>.from(data));
             print('✅ Parsed handshake: callerId=${handshake.callerId}, receiverId=${handshake.receiverId}, status=${handshake.status}');
             print('🔍 SDP Offer: ${handshake.sdpOffer != null ? "Present (${handshake.sdpOffer!.length} chars)" : "Missing"}');
