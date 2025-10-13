@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:walkie/core/utils/Utils.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../domain/entities/webrtc_media_stream.dart';
@@ -50,6 +51,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     required String receiverId,
   }) async {
     try {
+      Utils.log('Caller', 'Closing call between $callerId and $receiverId');
       // Update Firebase status to 'close_call' using shared utility
       await handshakeOperations?.updateHandshakeStatus(
         callerId: callerId,
@@ -84,11 +86,14 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     required String receiverId,
   }) async {
     try {
+      Utils.log('Caller', 'Initiating handshake between $callerId and $receiverId');
       // Create SDP and ICE for caller
       final sdpOffer = await createSdpOffer();
 
       // Set local description to start ICE gathering
       if (sdpOffer != null) {
+        Utils.log('Caller', 'SDP Offer: ${sdpOffer.sdp}');
+        Utils.log('Caller', 'Setting local description with SDP offer');
         await setLocalDescription(sdpOffer);
       }
       
@@ -104,7 +109,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
       // Start listening to handshake changes
       _startListening(callerId: callerId, receiverId: receiverId);
 
-      print('✅ Firebase handshake initialized');
+      Utils.log('Caller', 'Handshake initiated successfully between $callerId and $receiverId');
     } catch (e) {
       print('❌ Error initiating handshake: $e');
       rethrow;
@@ -140,10 +145,9 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
       (handshake) {
         // Handle close_call status
         if (handshake.status == 'close_call') {
-          print('📞 Close call detected - ending call for both parties');
           endCall();
         } else if (handshake.status == "call_acknowledge") {
-          print('📞 Call acknowledge received - setting up WebRTC connection');
+
           _handleCallAcknowledge(handshake);
         }
       },
@@ -167,17 +171,17 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
 
       // Set remote description with receiver's SDP answer
       if (handshake.sdpAnswer != null) {
-        print('📞 Setting remote description with receiver SDP answer');
+        Utils.log('Caller', 'Setting remote description with SDP answer '+handshake.sdpAnswer!);
         final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, 'answer');
         await setRemoteDescription(remoteDescription);
       } else {
-        print('❌ No SDP answer received from receiver');
+        Utils.log('Caller', 'No SDP answer received from receiver');
         return;
       }
 
       // Add receiver's ICE candidates
       if (handshake.iceCandidatesFromReceiver != null && handshake.iceCandidatesFromReceiver!.isNotEmpty) {
-        print('🧊 Adding ${handshake.iceCandidatesFromReceiver!.length} ICE candidates from receiver');
+        Utils.log('Caller', 'Adding ${handshake.iceCandidatesFromReceiver!.length} ICE candidates from receiver');
         
         for (final iceData in handshake.iceCandidatesFromReceiver!) {
           try {
@@ -189,41 +193,39 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
             
             await addIceCandidate(candidate);
           } catch (e) {
-            print('❌ Error processing ICE candidate: $e');
+            Utils.log('Caller', 'Error adding ICE candidate: $e');
           }
         }
       } else {
-        print('⚠️ No ICE candidates received from receiver');
+       Utils.log('Caller', 'No ICE candidates received from receiver');
       }
 
       // Ensure we have local media stream for the call
       final mediaResult = await webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
       if (mediaResult.isRight()) {
-        print('✅ Local media stream obtained for call acknowledge');
+        Utils.log('Caller', 'Local media stream obtained successfully');
         
         // Add local stream to peer connection - this is crucial for call initiation
         final addStreamResult = await webrtcService!.addLocalStreamToPeerConnection();
         addStreamResult.fold(
           (failure) {
-            print('❌ Failed to add local stream to peer connection: ${failure.message}');
+            Utils.log('Caller', 'Failed to add local audio stream to peer connection: ${failure.message}');
           },
           (_) {
-            print('✅ Local audio stream added to peer connection for call');
+            Utils.log('Caller', 'Local audio stream added to peer connection successfully');
           },
         );
       } else {
-        print('⚠️ Failed to get local media stream in call acknowledge');
+        Utils.log('Caller', 'Failed to obtain local media stream');
       }
 
       // Call is now ready - SDP and ICE exchange completed
-      print('📞 Call is ready - SDP and ICE exchange completed');
+      Utils.log('Caller', 'Call acknowledged by receiver, proceeding to establish connection');
 
-      // Now initiate the actual call using WebRTC service
-      print('🚀 Initiating call...');
       final callResult = await webrtcService!.startCall(_currentReceiverId ?? '');
       callResult.fold(
         (failure) {
-          print('❌ Failed to start call: ${failure.message}');
+          Utils.log('Caller', 'Failed to start call: ${failure.message}');
           state = state.copyWith(
             status: CallStatus.failed,
             isConnecting: false,
@@ -232,7 +234,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
           );
         },
         (_) {
-          print('✅ Call initiated successfully');
+          Utils.log('Caller', 'WebRTC Call established successfully');
           
           // Update call state to connected
           state = state.copyWith(
@@ -240,13 +242,12 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
             isConnecting: false,
             isConnected: true,
           );
-          
-          print('✅ WebRTC connection established successfully');
+
         },
       );
 
     } catch (e) {
-      print('❌ Error handling call acknowledge: $e');
+      Utils.log('Caller', 'Error handling call acknowledge: $e');
       state = state.copyWith(
         status: CallStatus.failed,
         isConnecting: false,

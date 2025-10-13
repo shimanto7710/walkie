@@ -26,7 +26,6 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
         .listenToUserHandshakes(userId)
         .listen(
           (handshake) async {
-            print('🌍 User handshake update: ${handshake.status}');
             state = handshake;
             
             // Check if current user is the receiver and call is initiated
@@ -65,8 +64,7 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
               // Get receiver's ICE candidates
               final receiverIceCandidates = await gatherIceCandidates();
 
-              // Add local stream to peer connection for incoming calls
-              print('📞 Adding local stream to peer connection for incoming call...');
+
               final addStreamResult = await webrtcService?.addLocalStreamToPeerConnection();
               addStreamResult?.fold(
                 (failure) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:walkie/core/utils/Utils.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
 import '../../../../data/services/handshake_operations.dart';
@@ -239,6 +240,7 @@ mixin BaseCallProvider {
 
   /// Stop listening to handshake changes
   void stopListening() {
+    Utils.log('Caller', 'Stopping handshake listener');
     _handshakeSubscription?.cancel();
     _handshakeSubscription = null;
   }
