@@ -108,7 +108,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
       );
 
       // Start listening to handshake changes
-      _startListening(callerId: callerId, receiverId: receiverId);
+      _startListening(callerId: callerId, receiverId: receiverId, isCaller: true);
 
       Utils.log('Caller', '$callerId Handshake initiated successfully between $callerId and $receiverId');
     } catch (e) {
@@ -122,20 +122,26 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     required String callerId,
     required String receiverId,
   }) {
-    Utils.log('Caller', '$callerId Starting to listen to handshake between $callerId and $receiverId');
-    _startListening(callerId: callerId, receiverId: receiverId);
+    Utils.log('Receiver', '$receiverId Starting to listen to handshake between $callerId and $receiverId');
+    _startListening(callerId: callerId, receiverId: receiverId, isCaller: false);
   }
 
   /// Start listening to handshake data changes
   void _startListening({
     required String callerId,
     required String receiverId,
+    required bool isCaller,
   }) async {
     stopListening();
 
     // Store current call participants
     _currentCallerId = callerId;
     _currentReceiverId = receiverId;
+
+    final role = isCaller ? 'Caller' : 'Receiver';
+    final userId = isCaller ? callerId : receiverId;
+    
+    Utils.log(role, '$userId Starting to listen to handshake changes (Role: $role)');
 
     // Pass SDP and ICE values to handshake
     handshakeSubscription = handshakeService!
@@ -145,16 +151,27 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     )
         .listen(
       (handshake) {
-        // Handle close_call status
+        Utils.log(role, '$userId Received handshake status: ${handshake.status}');
+        
+        // Handle close_call status - both parties should handle this
         if (handshake.status == 'close_call') {
+          Utils.log(role, '$userId Call closed by remote party');
           endCall();
-        } else if (handshake.status == "call_acknowledge") {
-
-          _handleCallAcknowledge(handshake);
+        } 
+        // Only CALLER handles call_acknowledge status
+        else if (handshake.status == "call_acknowledge") {
+          if (isCaller) {
+            Utils.log(role, '$userId Handling call acknowledgment from receiver');
+            _handleCallAcknowledge(handshake);
+          } else {
+            Utils.log(role, '$userId Ignoring call_acknowledge status (receiver should not handle this)');
+          }
         }
+        // Add other status handling here as needed
+        // Only RECEIVER should handle certain statuses, only CALLER should handle others
       },
       onError: (error) {
-        Utils.log('Caller', 'Error listening to handshake: $error');
+        Utils.log(role, 'Error listening to handshake: $error');
       },
     );
   }
