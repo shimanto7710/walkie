@@ -8,17 +8,79 @@ import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../provider/call_provider.dart';
 
+class _CallScreenConstants {
+  static const Duration pulseAnimationDuration = Duration(milliseconds: 1000);
+  static const Duration waveAnimationDuration = Duration(milliseconds: 2000);
+  static const Duration swipeAnimationDuration = Duration(milliseconds: 300);
+  static const Duration pushToTalkDelay = Duration(milliseconds: 100);
+  
+  static const double avatarSize = 200.0;
+  static const double avatarBorderWidth = 4.0;
+  static const double avatarInitialFontSize = 80.0;
+  static const double waveAnimationMaxSize = 50.0;
+  static const double buttonSize = 100.0;
+  static const double buttonIconSize = 40.0;
+  static const double statusIndicatorSize = 12.0;
+  
+  static const double pulseScaleBegin = 1.0;
+  static const double pulseScaleEnd = 1.2;
+  static const double waveOpacityBegin = 0.3;
+  static const double waveOpacityEnd = 0.1;
+  
+  static const double swipeThreshold = -10.0;
+  static const double swipeOffsetMultiplier = 100.0;
+  
+  static const EdgeInsets headerPadding = EdgeInsets.all(20);
+  static const EdgeInsets controlsPadding = EdgeInsets.symmetric(horizontal: 40, vertical: 20);
+  static const EdgeInsets instructionsPadding = EdgeInsets.symmetric(horizontal: 20);
+  static const EdgeInsets backButtonPadding = EdgeInsets.all(8);
+  
+  static const double headerSpacing = 4.0;
+  static const double mainContentSpacing = 40.0;
+  static const double statusSpacing = 60.0;
+  static const double controlsSpacing = 20.0;
+  static const double bottomPadding = 40.0;
+  static const double statusIndicatorSpacing = 8.0;
+  
+  static const double headerFontSize = 24.0;
+  static const double subtitleFontSize = 16.0;
+  static const double statusFontSize = 20.0;
+  static const double instructionsFontSize = 16.0;
+  static const double statusIndicatorFontSize = 14.0;
+  
+  static const double backButtonSize = 24.0;
+  static const double endCallButtonSize = 28.0;
+  static const double backButtonBorderRadius = 20.0;
+  
+  static const double shadowBlurRadius = 20.0;
+  static const double shadowSpreadRadius = 5.0;
+  static const double shadowOpacity = 0.3;
+  
+  static const int maxInstructionsLines = 4;
+  
+  static const Color backgroundColor = Colors.black;
+  static const Color primaryTextColor = Colors.white;
+  static const Color secondaryTextColor = Colors.white70;
+  static const Color connectedColor = Colors.green;
+  static const Color connectingColor = Colors.orange;
+  static const Color callingColor = Colors.blue;
+  static const Color ringingColor = Colors.purple;
+  static const Color talkingColor = Colors.orange;
+  static const Color inactiveColor = Colors.grey;
+  static const Color endCallColor = Colors.red;
+}
+
 class CallScreen extends ConsumerStatefulWidget {
-  final String currentUserId;      // ✅ Explicit dependency
-  final String currentUserName;    // ✅ Explicit dependency
+  final String currentUserId;
+  final String currentUserName;
   final User friend;
   final bool isIncomingCall;
   final String? handshakeId;
   
   const CallScreen({
     super.key,
-    required this.currentUserId,    // ✅ Required parameter
-    required this.currentUserName,  // ✅ Required parameter
+    required this.currentUserId,
+    required this.currentUserName,
     required this.friend,
     this.isIncomingCall = false,
     this.handshakeId,
@@ -46,20 +108,19 @@ class _CallScreenState extends ConsumerState<CallScreen>
     
 
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: _CallScreenConstants.pulseAnimationDuration,
       vsync: this,
     );
     _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.2,
+      begin: _CallScreenConstants.pulseScaleBegin,
+      end: _CallScreenConstants.pulseScaleEnd,
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
     ));
 
-
     _waveController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: _CallScreenConstants.waveAnimationDuration,
       vsync: this,
     );
     _waveAnimation = Tween<double>(
@@ -70,9 +131,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
       curve: Curves.easeInOut,
     ));
 
-
     _swipeController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: _CallScreenConstants.swipeAnimationDuration,
       vsync: this,
     );
     _swipeAnimation = Tween<Offset>(
@@ -86,7 +146,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
     _pulseController.repeat(reverse: true);
     _waveController.repeat();
     
-    // Initialize WebRTC and permissions
     _initializeWebRTC();
 
   }
@@ -158,21 +217,17 @@ class _CallScreenState extends ConsumerState<CallScreen>
         Utils.log('Receiver', 'Incoming call detected - starting to listen for handshake changes');
         Utils.log('Receiver', 'Handshake ID: ${widget.handshakeId}');
         
-        // For incoming calls, just start listening without initializing
-        // The friend is the caller in incoming calls
         final callerId = widget.friend.id;
-        final receiverId = widget.currentUserId; // ✅ Use passed user ID
+        final receiverId = widget.currentUserId;
         
-        // Start listening to handshake changes for incoming calls
         callNotifier.startListeningToHandshake(
           callerId: callerId,
           receiverId: receiverId,
         );
         
       } else {
-        // For outgoing calls, initialize handshake and start listening
         await callNotifier.initiateHandshake(
-          callerId: widget.currentUserId,    // ✅ Use passed user ID
+          callerId: widget.currentUserId,
           receiverId: widget.friend.id,
         );
         
@@ -209,8 +264,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isHolding = true;
     });
     
-    // Start talking - delegate to provider (clean architecture)
-    Future.delayed(const Duration(milliseconds: 100), () {
+    Future.delayed(_CallScreenConstants.pushToTalkDelay, () {
       ref.read(callNotifierProvider.notifier).startPushToTalk();
     });
   }
@@ -221,8 +275,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
         _isHolding = false;
       });
 
-      // Stop talking - delegate to provider (clean architecture)
-      Future.delayed(const Duration(milliseconds: 100), () {
+      Future.delayed(_CallScreenConstants.pushToTalkDelay, () {
         ref.read(callNotifierProvider.notifier).stopPushToTalk();
       });
     } else {
@@ -236,10 +289,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isSwipeGesture = true;
     });
     
-    // Accept the call when swiping up
     _acceptCall();
     
-    // Trigger the swipe up animation
     _swipeController.forward();
   }
 
@@ -250,18 +301,34 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isSwipeGesture = false;
     });
     
-    // Close call with Firebase update using passed user data
     final callNotifier = ref.read(callNotifierProvider.notifier);
     
-    // Close call and update Firebase status to 'close_call'
     await callNotifier.closeCall(
-      callerId: widget.currentUserId,    // ✅ Use passed user ID
+      callerId: widget.currentUserId,
       receiverId: widget.friend.id,
     );
 
-    // Reset the swipe animation
     _swipeController.reset();
+  }
 
+  String _getCallStatusText() {
+    if (_isCallSustained) {
+      return 'Call Active - Hold to Talk';
+    } else if (_isHolding) {
+      return 'Talking...';
+    } else {
+      return 'Hold to Talk';
+    }
+  }
+
+  Color _getCallStatusColor() {
+    if (_isCallSustained) {
+      return _CallScreenConstants.connectedColor;
+    } else if (_isHolding) {
+      return _CallScreenConstants.talkingColor;
+    } else {
+      return _CallScreenConstants.inactiveColor;
+    }
   }
 
   @override
@@ -273,7 +340,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
         setState(() {
         });
       } else if (next.status == CallStatus.ended) {
-        // Navigate to home when call ends (either by user action or remote close)
         Utils.log('Call', 'Call ended - navigating to home');
         context.go('/home');
       }
@@ -282,21 +348,16 @@ class _CallScreenState extends ConsumerState<CallScreen>
     final callState = ref.watch(callNotifierProvider);
     
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: _CallScreenConstants.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(),
-
             Expanded(
               child: _buildMainContent(callState),
             ),
-            
-            // Call controls
             _buildCallControls(callState),
-            
-            // Bottom padding
-            const SizedBox(height: 40),
+            const SizedBox(height: _CallScreenConstants.bottomPadding),
           ],
         ),
       ),
@@ -305,68 +366,55 @@ class _CallScreenState extends ConsumerState<CallScreen>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: _CallScreenConstants.headerPadding,
       child: Row(
         children: [
-          // Back button
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {
-                _endCall();
-              },
-              borderRadius: BorderRadius.circular(20),
+              onTap: _endCall,
+              borderRadius: BorderRadius.circular(_CallScreenConstants.backButtonBorderRadius),
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: _CallScreenConstants.backButtonPadding,
                 child: const Icon(
                   Icons.arrow_back_ios,
-                  color: Colors.white,
-                  size: 24,
+                  color: _CallScreenConstants.primaryTextColor,
+                  size: _CallScreenConstants.backButtonSize,
                 ),
               ),
             ),
           ),
           
-          // Friend info
           Expanded(
             child: Column(
               children: [
                 Text(
                   widget.friend.name,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
+                    color: _CallScreenConstants.primaryTextColor,
+                    fontSize: _CallScreenConstants.headerFontSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: _CallScreenConstants.headerSpacing),
                 Text(
-                  _isCallSustained 
-                    ? 'Call Active - Hold to Talk' 
-                    : _isHolding 
-                      ? 'Talking...' 
-                      : 'Hold to Talk',
+                  _getCallStatusText(),
                   style: TextStyle(
-                    color: _isCallSustained 
-                      ? Colors.green 
-                      : _isHolding 
-                        ? Colors.orange 
-                        : Colors.grey[400],
-                    fontSize: 16,
+                    color: _getCallStatusColor(),
+                    fontSize: _CallScreenConstants.subtitleFontSize,
                   ),
                 ),
               ],
             ),
           ),
           
-          // End call button (only visible when call is sustained)
           if (_isCallSustained)
             IconButton(
               onPressed: _endCall,
               icon: const Icon(
                 Icons.call_end,
-                color: Colors.red,
-                size: 28,
+                color: _CallScreenConstants.endCallColor,
+                size: _CallScreenConstants.endCallButtonSize,
               ),
             ),
         ],
@@ -378,23 +426,16 @@ class _CallScreenState extends ConsumerState<CallScreen>
     return SingleChildScrollView(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minHeight: MediaQuery.of(context).size.height - 200, // Account for header and controls
+          minHeight: MediaQuery.of(context).size.height - 200,
         ),
         child: IntrinsicHeight(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Friend avatar with status
               _buildFriendAvatar(),
-              
-              const SizedBox(height: 40),
-              
-              // Call status text
+              const SizedBox(height: _CallScreenConstants.mainContentSpacing),
               _buildCallStatus(callState),
-              
-              const SizedBox(height: 60),
-              
-              // Instructions
+              const SizedBox(height: _CallScreenConstants.statusSpacing),
               _buildInstructions(),
             ],
           ),
@@ -406,18 +447,19 @@ class _CallScreenState extends ConsumerState<CallScreen>
   Widget _buildFriendAvatar() {
     return Stack(
       children: [
-        // Animated background waves
         if (_isHolding || _isCallSustained)
           AnimatedBuilder(
             animation: _waveAnimation,
             builder: (context, child) {
               return Container(
-                width: 200 + (_waveAnimation.value * 50),
-                height: 200 + (_waveAnimation.value * 50),
+                width: _CallScreenConstants.avatarSize + (_waveAnimation.value * _CallScreenConstants.waveAnimationMaxSize),
+                height: _CallScreenConstants.avatarSize + (_waveAnimation.value * _CallScreenConstants.waveAnimationMaxSize),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.green.withOpacity(0.3 - (_waveAnimation.value * 0.2)),
+                    color: _CallScreenConstants.connectedColor.withOpacity(
+                      _CallScreenConstants.waveOpacityBegin - (_waveAnimation.value * 0.2)
+                    ),
                     width: 2,
                   ),
                 ),
@@ -425,24 +467,23 @@ class _CallScreenState extends ConsumerState<CallScreen>
             },
           ),
         
-        // Friend avatar
         Container(
-          width: 200,
-          height: 200,
+          width: _CallScreenConstants.avatarSize,
+          height: _CallScreenConstants.avatarSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: widget.friend.status ? Colors.green : Colors.grey,
+            color: widget.friend.status ? _CallScreenConstants.connectedColor : _CallScreenConstants.inactiveColor,
             border: Border.all(
-              color: Colors.white,
-              width: 4,
+              color: _CallScreenConstants.primaryTextColor,
+              width: _CallScreenConstants.avatarBorderWidth,
             ),
           ),
           child: Center(
             child: Text(
               widget.friend.initial,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 80,
+                color: _CallScreenConstants.primaryTextColor,
+                fontSize: _CallScreenConstants.avatarInitialFontSize,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -453,69 +494,90 @@ class _CallScreenState extends ConsumerState<CallScreen>
   }
 
   Widget _buildCallStatus(CallState callState) {
-    String statusText;
-    Color statusColor;
-    
-    if (callState.status == CallStatus.connected) {
-      statusText = 'Call Connected';
-      statusColor = Colors.green;
-    } else if (callState.isConnecting) {
-      statusText = 'Connecting...';
-      statusColor = Colors.orange;
-    } else if (callState.status == CallStatus.calling) {
-      statusText = 'Calling...';
-      statusColor = Colors.blue;
-    } else if (callState.status == CallStatus.ringing) {
-      statusText = 'Ringing...';
-      statusColor = Colors.purple;
-    } else if (_isCallSustained) {
-      statusText = 'Call Active';
-      statusColor = Colors.green;
-    } else if (_isHolding) {
-      statusText = 'Talking...';
-      statusColor = Colors.orange;
-    } else {
-      statusText = 'Hold to Talk';
-      statusColor = Colors.grey[400]!;
-    }
+    final statusInfo = _getCallStatusInfo(callState);
     
     return Text(
-      statusText,
+      statusInfo.text,
       style: TextStyle(
-        color: statusColor,
-        fontSize: 20,
+        color: statusInfo.color,
+        fontSize: _CallScreenConstants.statusFontSize,
         fontWeight: FontWeight.w600,
       ),
     );
   }
 
+  ({String text, Color color}) _getCallStatusInfo(CallState callState) {
+    if (callState.status == CallStatus.connected) {
+      return (text: 'Call Connected', color: _CallScreenConstants.connectedColor);
+    } else if (callState.isConnecting) {
+      return (text: 'Connecting...', color: _CallScreenConstants.connectingColor);
+    } else if (callState.status == CallStatus.calling) {
+      return (text: 'Calling...', color: _CallScreenConstants.callingColor);
+    } else if (callState.status == CallStatus.ringing) {
+      return (text: 'Ringing...', color: _CallScreenConstants.ringingColor);
+    } else if (_isCallSustained) {
+      return (text: 'Call Active', color: _CallScreenConstants.connectedColor);
+    } else if (_isHolding) {
+      return (text: 'Talking...', color: _CallScreenConstants.talkingColor);
+    } else {
+      return (text: 'Hold to Talk', color: _CallScreenConstants.inactiveColor);
+    }
+  }
+
   Widget _buildInstructions() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: _CallScreenConstants.instructionsPadding,
       child: Text(
-        _isCallSustained
-            ? 'Call is active. Tap end call to disconnect.'
-            : _isHolding
-                ? 'Talking...\nSwipe up to sustain call\nRelease to stop talking'
-                : 'Hold to talk\nSwipe up while holding to sustain call\nRelease to stop talking',
+        _getInstructionsText(),
         style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 16,
+          color: _CallScreenConstants.secondaryTextColor,
+          fontSize: _CallScreenConstants.instructionsFontSize,
         ),
         textAlign: TextAlign.center,
-        maxLines: 4,
+        maxLines: _CallScreenConstants.maxInstructionsLines,
         overflow: TextOverflow.ellipsis,
       ),
     );
   }
 
+  String _getInstructionsText() {
+    if (_isCallSustained) {
+      return 'Call is active. Tap end call to disconnect.';
+    } else if (_isHolding) {
+      return 'Talking...\nSwipe up to sustain call\nRelease to stop talking';
+    } else {
+      return 'Hold to talk\nSwipe up while holding to sustain call\nRelease to stop talking';
+    }
+  }
+
+  Color _getButtonColor() {
+    return (_isHolding || _isCallSustained) 
+      ? _CallScreenConstants.connectedColor 
+      : _CallScreenConstants.endCallColor;
+  }
+
+  Color _getStatusIndicatorColor() {
+    return (_isHolding || _isCallSustained) 
+      ? _CallScreenConstants.connectedColor 
+      : _CallScreenConstants.inactiveColor;
+  }
+
+  String _getStatusIndicatorText() {
+    if (_isCallSustained) {
+      return 'Call Active';
+    } else if (_isHolding) {
+      return 'Talking';
+    } else {
+      return 'Hold to Talk';
+    }
+  }
+
   Widget _buildCallControls(CallState callState) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+      padding: _CallScreenConstants.controlsPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Hold to talk button
           Listener(
             onPointerDown: (details) {
               _onHoldStart();
@@ -533,8 +595,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
               }
             },
             onPointerMove: (details) {
-              // Check for swipe up gesture
-              if (details.delta.dy < -10 && _isHolding && !_isCallSustained) {
+              if (details.delta.dy < _CallScreenConstants.swipeThreshold && _isHolding && !_isCallSustained) {
                 _onSwipeUp();
               }
             },
@@ -543,32 +604,28 @@ class _CallScreenState extends ConsumerState<CallScreen>
               builder: (context, child) {
                 return Transform.translate(
                   offset: _isCallSustained 
-                    ? Offset(0, _swipeAnimation.value.dy * 100) // 100 is button height
+                    ? Offset(0, _swipeAnimation.value.dy * _CallScreenConstants.swipeOffsetMultiplier)
                     : Offset.zero,
                   child: Transform.scale(
                     scale: _isHolding ? _pulseAnimation.value : 1.0,
                     child: Container(
-                      width: 100,
-                      height: 100,
+                      width: _CallScreenConstants.buttonSize,
+                      height: _CallScreenConstants.buttonSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: (_isHolding || _isCallSustained) 
-                          ? Colors.green 
-                          : Colors.red,
+                        color: _getButtonColor(),
                         boxShadow: [
                           BoxShadow(
-                            color: ((_isHolding || _isCallSustained) 
-                              ? Colors.green 
-                              : Colors.red).withOpacity(0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
+                            color: _getButtonColor().withOpacity(_CallScreenConstants.shadowOpacity),
+                            blurRadius: _CallScreenConstants.shadowBlurRadius,
+                            spreadRadius: _CallScreenConstants.shadowSpreadRadius,
                           ),
                         ],
                       ),
                       child: Icon(
                         Icons.mic,
-                        color: Colors.white,
-                        size: 40,
+                        color: _CallScreenConstants.primaryTextColor,
+                        size: _CallScreenConstants.buttonIconSize,
                       ),
                     ),
                   ),
@@ -577,37 +634,28 @@ class _CallScreenState extends ConsumerState<CallScreen>
             ),
           ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: _CallScreenConstants.controlsSpacing),
           
-          // Status indicator
           Flexible(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: _CallScreenConstants.statusIndicatorSize,
+                  height: _CallScreenConstants.statusIndicatorSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _isHolding || _isCallSustained 
-                      ? Colors.green 
-                      : Colors.grey,
+                    color: _getStatusIndicatorColor(),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: _CallScreenConstants.statusIndicatorSpacing),
                 Flexible(
                   child: Text(
-                    _isCallSustained 
-                      ? 'Call Active' 
-                      : _isHolding 
-                        ? 'Talking' 
-                        : 'Hold to Talk',
+                    _getStatusIndicatorText(),
                     style: TextStyle(
-                      color: _isHolding || _isCallSustained 
-                        ? Colors.green 
-                        : Colors.grey[400],
-                      fontSize: 14,
+                      color: _getStatusIndicatorColor(),
+                      fontSize: _CallScreenConstants.statusIndicatorFontSize,
                       fontWeight: FontWeight.w500,
                     ),
                     overflow: TextOverflow.ellipsis,
