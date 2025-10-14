@@ -14,42 +14,30 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User>> login(String email, String password) async {
-    print('🔐 AuthRepository.login called with: $email');
     try {
       final user = await _dataSource.authenticateUser(email, password);
-      print('🔍 DataSource returned user: ${user?.name}');
       
       if (user != null) {
-        print('✅ User found, updating status to online...');
-        // Update user status to online
         await _dataSource.updateUserStatus(user.id, true);
-        print('✅ User status updated successfully');
         return Right(user);
       } else {
-        print('❌ No user found with these credentials');
         return Left(AuthFailure('Invalid email or password'));
       }
     } on ServerException catch (e) {
-      print('❌ Server exception: ${e.message}');
       return Left(ServerFailure(e.message));
     } catch (e) {
-      print('❌ Unexpected error: $e');
       return Left(UnknownFailure('Unexpected error: $e'));
     }
   }
 
   @override
   Future<Either<Failure, User>> signup(String name, String email, String password) async {
-    print('🔐 AuthRepository.signup called with: $email');
     try {
       final user = await _dataSource.createUser(name, email, password);
-      print('✅ User created successfully: ${user.name}');
       return Right(user);
     } on ServerException catch (e) {
-      print('❌ Server exception: ${e.message}');
       return Left(ServerFailure(e.message));
     } catch (e) {
-      print('❌ Unexpected error: $e');
       return Left(UnknownFailure('Unexpected error: $e'));
     }
   }
@@ -57,8 +45,6 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      // For now, we'll just return success
-      // In a real app, you might want to update user status to offline
       return const Right(null);
     } catch (e) {
       return Left(UnknownFailure('Logout failed: $e'));
@@ -68,8 +54,6 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User?>> getCurrentUser() async {
     try {
-      // For now, return null as we don't have persistent login
-      // In a real app, you'd get this from local storage or Firebase Auth
       return const Right(null);
     } catch (e) {
       return Left(UnknownFailure('Failed to get current user: $e'));

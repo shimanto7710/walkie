@@ -20,28 +20,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkSessionAndNavigate() async {
-    print('🚀 Splash screen: Starting session check...');
     
     // Wait a bit for the splash screen to be visible
     await Future.delayed(const Duration(seconds: 2));
     
     if (!mounted) {
-      print('❌ Splash screen: Widget not mounted, returning');
       return;
     }
     
     try {
-      print('🔍 Splash screen: Checking login status...');
       final isLoggedIn = await SessionHelper.isLoggedIn();
-      print('📱 Splash screen: Login status: $isLoggedIn');
       
       if (!mounted) {
-        print('❌ Splash screen: Widget not mounted after session check, returning');
         return;
       }
       
       if (isLoggedIn) {
-        print('✅ Splash screen: User is logged in, restoring auth state...');
         
         // Restore auth state from session
         final userId = await SessionHelper.getUserId();
@@ -66,22 +60,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             currentUser: user,
           );
           
-          print('✅ Splash screen: Auth state restored for user: $userName');
-          print('🔍 Splash screen: Auth state - isAuthenticated: ${ref.read(authProvider).isAuthenticated}');
-          print('🔍 Splash screen: Auth state - currentUser: ${ref.read(authProvider).currentUser?.name}');
         }
         
-        print('✅ Splash screen: Navigating to home...');
         context.go('/home');
       } else {
-        print('❌ Splash screen: User is not logged in, navigating to login...');
         context.go('/login');
       }
     } catch (e) {
-      print('❌ Splash screen: Error checking session: $e');
       // On error, go to login
       if (mounted) {
-        print('🔄 Splash screen: Navigating to login due to error...');
         context.go('/login');
       }
     }

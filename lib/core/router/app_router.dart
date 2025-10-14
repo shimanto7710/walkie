@@ -5,18 +5,19 @@ import '../../presentation/features/signup/ui/signup_screen.dart';
 import '../../presentation/features/splash/ui/splash_screen.dart';
 import '../../presentation/features/call/ui/call_screen.dart';
 import '../../domain/entities/user.dart';
+import '../constants/app_constants.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
   routes: [
     GoRoute(
       path: '/splash',
-      name: 'splash',
+      name: AppConstants.splashRouteName,
       builder: (context, state) => const SplashScreen(),
     ),
     GoRoute(
       path: '/login',
-      name: 'login',
+      name: AppConstants.loginRouteName,
       builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
@@ -26,25 +27,22 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/home',
-      name: 'home',
+      name: AppConstants.homeRouteName,
       builder: (context, state) => const HomeScreen(),
     ),
     GoRoute(
       path: '/call/:friendId',
-      name: 'call',
+      name: AppConstants.callRouteName,
       builder: (context, state) {
         final friendId = state.pathParameters['friendId']!;
         final queryParams = state.uri.queryParameters;
         
-        // Check if this is an incoming call
         final isIncomingCall = queryParams['incoming'] == 'true';
         final handshakeId = queryParams['handshakeId'];
         
-        // ✅ Get user data from navigation parameters
         final currentUserId = queryParams['currentUserId']!;
         final currentUserName = queryParams['currentUserName']!;
         
-        // Create a mock user with proper name mapping
         final friend = User(
           id: friendId,
           name: _getFriendName(friendId),
@@ -56,8 +54,8 @@ final appRouter = GoRouter(
         );
         
         return CallScreen(
-          currentUserId: currentUserId,        // ✅ Pass user ID
-          currentUserName: currentUserName,    // ✅ Pass user name
+          currentUserId: currentUserId,
+          currentUserName: currentUserName,
           friend: friend,
           isIncomingCall: isIncomingCall,
           handshakeId: handshakeId,
@@ -67,7 +65,6 @@ final appRouter = GoRouter(
   ],
 );
 
-/// Helper function to get friend name by ID
 String _getFriendName(String friendId) {
   switch (friendId) {
     case 'ozil':

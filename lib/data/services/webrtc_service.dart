@@ -18,13 +18,11 @@ abstract class WebRTCService {
   Stream<WebRTCConnectionState> get connectionStateStream;
   WebRTCConnectionState get currentState;
   
-  // SDP Functions
   Future<Either<Failure, RTCSessionDescription>> createOffer();
   Future<Either<Failure, RTCSessionDescription>> createAnswer();
   Future<Either<Failure, void>> setLocalDescription(RTCSessionDescription description);
   Future<Either<Failure, void>> setRemoteDescription(RTCSessionDescription description);
   
-  // ICE Functions
   List<RTCIceCandidate> getIceCandidates();
   Stream<RTCIceCandidate> get iceCandidateStream;
   Future<Either<Failure, void>> addIceCandidate(RTCIceCandidate candidate);
@@ -35,19 +33,15 @@ abstract class WebRTCService {
 }
 
 class FlutterWebRTCService implements WebRTCService {
-  // Singleton instance
   static FlutterWebRTCService? _instance;
   
-  // Private constructor
   FlutterWebRTCService._internal();
   
-  // Factory constructor that returns the singleton instance
   factory FlutterWebRTCService() {
     _instance ??= FlutterWebRTCService._internal();
     return _instance!;
   }
   
-  // Static method to get the instance
   static FlutterWebRTCService get instance {
     _instance ??= FlutterWebRTCService._internal();
     return _instance!;
@@ -63,7 +57,6 @@ class FlutterWebRTCService implements WebRTCService {
   WebRTCConnectionState _currentState = const WebRTCConnectionState();
   bool _isInitialized = false;
   
-  // ICE candidate collection
   final List<RTCIceCandidate> _iceCandidates = [];
   final StreamController<RTCIceCandidate> _iceCandidateController =
       StreamController<RTCIceCandidate>.broadcast();
@@ -78,13 +71,11 @@ class FlutterWebRTCService implements WebRTCService {
         }
       }
       
-      // Request permissions
       final permissionResult = await _requestPermissions();
       if (permissionResult.isLeft()) {
         return permissionResult;
       }
       
-      // Create peer connection
       await _createPeerConnection();
       
       _isInitialized = true;
@@ -101,7 +92,6 @@ class FlutterWebRTCService implements WebRTCService {
 
   Future<Either<Failure, void>> _requestPermissions() async {
     try {
-      // Request microphone permission
       final micPermission = await Permission.microphone.request();
       if (!micPermission.isGranted) {
         return Left(const Failure.unknownFailure('Microphone permission denied'));
@@ -210,13 +200,11 @@ class FlutterWebRTCService implements WebRTCService {
         remoteUserId: remoteUserId,
       ));
 
-      // Get user media
       final mediaResult = await getUserMedia(const WebRTCMediaConstraints(audio: true));
       if (mediaResult.isLeft()) {
         return mediaResult;
       }
 
-      // Add local stream to peer connection using addTrack (Unified Plan)
       if (_localStream != null && _peerConnection != null) {
         final addStreamResult = await addLocalStreamToPeerConnection();
         if (addStreamResult.isLeft()) {
@@ -245,13 +233,11 @@ class FlutterWebRTCService implements WebRTCService {
         status: WebRTCConnectionStatus.connecting,
       ));
 
-      // Get user media
       final mediaResult = await getUserMedia(const WebRTCMediaConstraints(audio: true));
       if (mediaResult.isLeft()) {
         return mediaResult;
       }
 
-      // Add local stream to peer connection using addTrack (Unified Plan)
       if (_localStream != null && _peerConnection != null) {
         final addStreamResult = await addLocalStreamToPeerConnection();
         if (addStreamResult.isLeft()) {
@@ -301,71 +287,31 @@ class FlutterWebRTCService implements WebRTCService {
   @override
   Future<Either<Failure, void>> toggleMute() async {
     try {
-      
-      // Step 1: Check and request permissions first
-      final permissionResult = await _requestPermissions();
-      if (permissionResult.isLeft()) {
-        return Left(Failure.unknownFailure('Microphone permission required'));
+      // Check if WebRTC is initialized and we have a local stream
+      if (!_isInitialized || _localStream == null) {
+        return Left(Failure.unknownFailure('WebRTC not initialized or no local stream available'));
       }
       
-      // Step 2: Ensure WebRTC is initialized
-      if (!_isInitialized) {
-        final initResult = await initialize();
-        if (initResult.isLeft()) {
-          return Left(Failure.unknownFailure('WebRTC initialization failed'));
-        }
-      } else {
-      }
-      
-      // Step 3: Ensure we have a local stream
-      if (_localStream == null) {
-        final mediaResult = await getUserMedia(const WebRTCMediaConstraints(audio: true));
-        if (mediaResult.isLeft()) {
-          return Left(Failure.unknownFailure('Failed to access microphone'));
-        }
-        
-        // Add stream to peer connection
-        final addStreamResult = await addLocalStreamToPeerConnection();
-        if (addStreamResult.isLeft()) {
-        } else {
-        }
-      } else {
-      }
-      
-      // Step 4: Final validation
-      if (_localStream == null) {
-        return Left(Failure.unknownFailure('Microphone not available'));
-      }
-      
-      // Step 5: Get and validate audio tracks
+      // Get audio tracks from existing local stream
       List<MediaStreamTrack> audioTracks;
       try {
         audioTracks = _localStream!.getAudioTracks();
       } catch (e) {
-        return Left(Failure.unknownFailure('Failed to access audio tracks'));
+        return Left(Failure.unknownFailure('Failed to access audio tracks: $e'));
       }
       
       if (audioTracks.isEmpty) {
         return Left(Failure.unknownFailure('No audio tracks found'));
       }
       
-      // Step 6: Toggle audio tracks with maximum safety
+      // Toggle the enabled state of all audio tracks
       bool anySuccess = false;
-      
-      for (int i = 0; i < audioTracks.length; i++) {
+      for (final track in audioTracks) {
         try {
-          final track = audioTracks[i];
-          final currentState = track.enabled;
-          final newState = !currentState;
-          
-          
-          // Track is already validated in the loop, no need to check for null
-          
-          track.enabled = newState;
+          track.enabled = !track.enabled;
           anySuccess = true;
-          
         } catch (e) {
-          // Continue with other tracks
+          // Continue with other tracks even if one fails
         }
       }
       
@@ -373,15 +319,11 @@ class FlutterWebRTCService implements WebRTCService {
         return Left(Failure.unknownFailure('Failed to toggle microphone'));
       }
       
-      // Step 7: Update state (non-critical)
-      try {
-        _updateConnectionState(_currentState.copyWith(
-          isMuted: !_currentState.isMuted,
-          isLocalAudioEnabled: !_currentState.isMuted,
-        ));
-      } catch (e) {
-        // Don't fail the operation for state update error
-      }
+      // Update connection state with new mute status
+      _updateConnectionState(_currentState.copyWith(
+        isMuted: !_currentState.isMuted,
+        isLocalAudioEnabled: !_currentState.isMuted,
+      ));
 
       return const Right(null);
       
@@ -393,7 +335,6 @@ class FlutterWebRTCService implements WebRTCService {
   @override
   Future<Either<Failure, void>> toggleSpeaker() async {
     try {
-      // In a real implementation, you would control the speaker here
       _updateConnectionState(_currentState.copyWith(
         isSpeakerOn: !_currentState.isSpeakerOn,
       ));
@@ -415,7 +356,6 @@ class FlutterWebRTCService implements WebRTCService {
   @override
   WebRTCConnectionState get currentState => _currentState;
 
-  // SDP Functions
   @override
   Future<Either<Failure, RTCSessionDescription>> createOffer() async {
     try {
@@ -472,7 +412,6 @@ class FlutterWebRTCService implements WebRTCService {
     }
   }
 
-  // ICE Functions
   @override
   List<RTCIceCandidate> getIceCandidates() {
     return List.from(_iceCandidates);
@@ -499,20 +438,16 @@ class FlutterWebRTCService implements WebRTCService {
   Future<Either<Failure, void>> reset() async {
     try {
       
-      // Close existing peer connection
       if (_peerConnection != null) {
         await _peerConnection!.close();
         _peerConnection = null;
       }
       
-      // Clear ICE candidates
       _iceCandidates.clear();
       
-      // Reset state
       _isInitialized = false;
       _currentState = const WebRTCConnectionState();
       
-      // Create new peer connection
       await _createPeerConnection();
       _isInitialized = true;
       
@@ -538,7 +473,6 @@ class FlutterWebRTCService implements WebRTCService {
         return Left(Failure.unknownFailure('Peer connection not initialized'));
       }
       
-      // Use addTrack instead of addStream (Unified Plan SDP semantics)
       final audioTracks = _localStream!.getAudioTracks();
       for (final track in audioTracks) {
         await _peerConnection!.addTrack(track, _localStream!);
@@ -551,13 +485,11 @@ class FlutterWebRTCService implements WebRTCService {
     }
   }
 
-  /// Debug method to print current WebRTC state
   void printDebugInfo() {
     if (_peerConnection != null) {
     }
   }
 
-  /// Debug method to check ICE candidate stream
   void debugIceCandidateStream() {
     
     if (_iceCandidates.isNotEmpty) {
@@ -575,11 +507,9 @@ class FlutterWebRTCService implements WebRTCService {
     _connectionStateController.close();
     _iceCandidateController.close();
     
-    // Reset singleton instance
     _instance = null;
   }
   
-  // Static method to dispose the singleton
   static void disposeInstance() {
     _instance?.dispose();
     _instance = null;

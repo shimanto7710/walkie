@@ -71,9 +71,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       try {
         final userRepository = getIt<UserRepository>();
         await userRepository.updateUserStatus(currentUserId, false);
-        print('✅ User status updated to offline: $currentUserId');
       } catch (e) {
-        print('❌ Error updating user status on logout: $e');
         // Don't throw error - logout should still succeed
       }
     }
@@ -82,33 +80,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signup(String name, String email, String password) async {
-    print('🚀 Starting signup process...');
-    print('  Name: $name');
-    print('  Email: $email');
-    print('  Password: $password');
     
     state = state.copyWith(isLoading: true, errorMessage: null);
-    print('📱 State updated: isLoading = true');
 
     final result = await _signupUseCase(
       name: name,
       email: email,
       password: password,
     );
-    print('🔍 Signup use case result: $result');
 
     result.fold(
       (failure) {
-        print('❌ Signup failed: $failure');
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: false,
           errorMessage: _getErrorMessage(failure),
         );
-        print('📱 State updated: isLoading = false, isAuthenticated = false');
       },
       (user) async {
-        print('✅ Signup successful: ${user.name}');
         // Save session
         await SessionHelper.saveLoginSession(
           userId: user.id,
@@ -121,7 +110,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
           currentUser: user,
           errorMessage: null,
         );
-        print('📱 State updated: isLoading = false, isAuthenticated = true');
       },
     );
   }

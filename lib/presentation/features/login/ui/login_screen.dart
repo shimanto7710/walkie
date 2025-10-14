@@ -37,7 +37,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Set default values for testing
     _emailController.text = 'guler@gmail.com';
     _passwordController.text = '123456';
   }
@@ -46,13 +45,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    // Listen to auth state changes
     ref.listen<AuthState>(authProvider, (previous, next) {
       
       if (next.isAuthenticated) {
         context.go('/home');
       } else if (next.errorMessage != null) {
-        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
@@ -80,7 +77,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // App Logo/Title
                     const Icon(
                       Icons.directions_walk,
                       size: 80,
@@ -107,7 +103,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 48),
 
-                    // Email Field
                     CustomTextField(
                       controller: _emailController,
                       labelText: 'Email',
@@ -127,7 +122,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
                     CustomTextField(
                       controller: _passwordController,
                       labelText: 'Password',
@@ -158,7 +152,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Login Button
                     CustomButton(
                       text: 'Login',
                       onPressed: _handleLogin,
@@ -166,7 +159,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Signup Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -189,11 +181,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
 
-                    // Forgot Password Link
                     /*TextButton(
                       onPressed: () {
-                        // TODO: Implement forgot password
-                        print('Forgot password tapped');
                       },
                       child: const Text(
                         'Forgot Password?',

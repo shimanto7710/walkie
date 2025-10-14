@@ -20,7 +20,6 @@ class FirebaseUserDataSource {
         ));
       }
     } catch (e) {
-      print('❌ Error converting friends data: $e');
     }
     
     return {};
@@ -66,7 +65,6 @@ class FirebaseUserDataSource {
       if (snapshot.exists) {
         final data = snapshot.value;
         if (data is Map) {
-          print("🔍 Data keys: ${data.keys.toList()}");
         
         final users = data.entries
             .map((entry) => User.fromJson({
@@ -102,31 +100,26 @@ class FirebaseUserDataSource {
 
   Future<List<User>> getFriendsOfUser(String userId) async {
     try {
-      print('🔍 Getting friends of user: $userId');
       
       // First get the current user's friends list
       final userRef = _database.ref('users/$userId');
       final userSnapshot = await userRef.get();
       
       if (!userSnapshot.exists) {
-        print('❌ User not found: $userId');
         return [];
       }
       
       final userData = Map<String, dynamic>.from(userSnapshot.value as Map);
       final friendsData = _convertFriendsData(userData['friends']);
       
-      print('📱 User friends data: $friendsData');
       
       if (friendsData.isEmpty) {
-        print('📱 No friends found for user: $userId');
         return [];
       }
       
       // Get all users
       final allUsersSnapshot = await _database.ref('users').get();
       if (!allUsersSnapshot.exists) {
-        print('❌ No users found in database');
         return [];
       }
       
@@ -148,25 +141,20 @@ class FirebaseUserDataSource {
             'friends': _convertFriendsData(friendData['friends']),
           });
           friends.add(friend);
-          print('✅ Added friend: ${friend.name} (${friend.id})');
         } else {
-          print('⚠️ Friend not found in database: $friendId');
         }
       }
       
-      print('📱 Total friends found: ${friends.length}');
       return friends;
       }
       return [];
     } catch (e) {
-      print('❌ Error getting friends: $e');
       throw ServerException('Failed to get friends: $e');
     }
   }
 
   Stream<List<User>> watchFriendsOfUser(String userId) {
     try {
-      print('🔍 Watching friends of user: $userId');
       
       return _database.ref('users').onValue.map((event) async {
         if (!event.snapshot.exists) {

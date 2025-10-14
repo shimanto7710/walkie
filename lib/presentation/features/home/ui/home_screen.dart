@@ -25,7 +25,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize WebRTC for incoming calls
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeWebRTCForIncomingCalls();
     });
@@ -37,17 +36,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final authState = ref.read(authProvider);
       if (authState.currentUser != null) {
-        print('🔧 Simple call UI ready');
-        
-        // Start listening to global handshake changes for this user
         final globalHandshakeNotifier = ref.read(globalHandshakeNotifierProvider.notifier);
         globalHandshakeNotifier.listenForUserHandshakes(authState.currentUser!.id);
-        
         _webrtcInitialized = true;
-        print('✅ Simple call UI initialized with global handshake listener');
       }
     } catch (e) {
-      print('❌ Failed to initialize Simple WebRTC for incoming calls: $e');
+      // Handle initialization error
     }
   }
 
@@ -55,12 +49,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final friendsAsync = ref.watch(friendsNotifierProvider);
     
-    // Listen for call state changes
     ref.listen<CallState>(callNotifierProvider, (previous, next) {
       if (next.status == CallStatus.ringing && next.remoteUserId != null) {
-        print('📞 Incoming call detected on home screen from ${next.remoteUserId}');
-        
-        // Navigate to call screen with user data
         final authState = ref.read(authProvider);
         if (authState.currentUser != null) {
           context.go('/call/${next.remoteUserId}?currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
@@ -68,49 +58,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    // Listen for global handshake changes from anywhere in the app
     ref.listen<Handshake?>(globalHandshakeNotifierProvider, (previous, next) {
       if (next != null) {
         final authState = ref.read(authProvider);
         if (authState.currentUser != null) {
-          // Check if this handshake involves the current user
           if (next.callerId == authState.currentUser!.id || 
               next.receiverId == authState.currentUser!.id) {
             
-            print('🌍 Global handshake detected on home screen:');
-            print('   Status: ${next.status}');
-            print('   Caller: ${next.callerId}');
-            print('   Receiver: ${next.receiverId}');
-            
-            // Handle different handshake statuses
             switch (next.status) {
               case 'call_initiate':
-                print('📞 New call initiated!');
                 break;
               case 'call_acknowledge':
-                print('📞 Call acknowledged!');
-                // Navigate to call screen when call is acknowledged
                 if (next.receiverId == authState.currentUser!.id) {
-                  print('📞 Navigating to call screen for incoming call from ${next.callerId}');
-                  // Pass handshake data to indicate this is an incoming call
                   context.go('/call/${next.callerId}?incoming=true&handshakeId=${next.callerId}_${next.receiverId}&currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
                 }
                 break;
               case 'ringing':
-                print('📞 Call is ringing!');
                 break;
               case 'connected':
-                print('📞 Call connected!');
                 break;
               case 'completed':
-                print('📞 Call completed!');
                 break;
               case 'close_call':
-                print('📞 Call closed by other party!');
-                // Handle call closure - could show notification or update UI
                 break;
               default:
-                print('📞 Handshake status: ${next.status}');
+                break;
             }
           }
         }
@@ -122,47 +94,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const Text('Walkie'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          // Profile Icon
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              // TODO: Navigate to profile screen
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Profile feature coming soon!')),
               );
             },
             tooltip: 'Profile',
           ),
-          // Clean Signals Button
           IconButton(
             icon: const Icon(Icons.cleaning_services),
             onPressed: () => _showCleanupDialog(context),
             tooltip: 'Clean Firebase Signals',
           ),
-          // Debug Handshake Button
           IconButton(
             icon: const Icon(Icons.bug_report),
             onPressed: () => _testHandshake(context, ref),
             tooltip: 'Test Handshake',
           ),
-          // Debug Firebase Listener Button
           IconButton(
             icon: const Icon(Icons.wifi),
             onPressed: () => _testFirebaseListener(context, ref),
             tooltip: 'Test Firebase Listener',
           ),
-          // Settings Icon
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              // TODO: Navigate to settings screen
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Settings feature coming soon!')),
               );
             },
             tooltip: 'Settings',
           ),
-          // Logout Button
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _showLogoutDialog(context, ref),
@@ -206,7 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   final friend = friends[index];
                   return UserListItem(
                     user: friend,
-                    onTap: null, // No tap action - status is managed automatically
+                    onTap: null,
                     onCall: () => _startCall(context, friend),
                   );
                 },
@@ -285,7 +249,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _startCall(BuildContext context, User friend) {
-    print('📞 Starting call with ${friend.name}');
     final authState = ref.read(authProvider);
     if (authState.currentUser != null) {
       context.go('/call/${friend.id}?currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
@@ -368,7 +331,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _cleanupFirebaseSignals() async {
     try {
-      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -383,17 +345,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-      // Get signal count before cleanup
       final beforeCount = await FirebaseCleanup.getSignalCount();
-      
-      // Clean up signals
       await FirebaseCleanup.deleteAllSignals();
       
-      // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
-        
-        // Show success message with count
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ Cleaned up $beforeCount signals from Firebase!'),
@@ -403,11 +359,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     } catch (e) {
-      // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
-        
-        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Failed to clean signals: $e'),
@@ -435,7 +388,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final currentUserId = authState.currentUser!.id;
       final currentUserName = authState.currentUser!.name;
       
-      // Test handshake with ozil
       final testUserId = currentUserId == 'guler' ? 'ozil' : 'guler';
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -445,7 +397,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-      // Test simple call functionality
       final callNotifier = ref.read(callNotifierProvider.notifier);
       callNotifier.startCall();
       
@@ -487,29 +438,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
 
-      // Test Firebase listener directly
       final database = FirebaseDatabase.instance.ref();
       final handshakeRef = database.child('handshakes');
       
-      print('🔥 Firebase test - Setting up listener for handshakes...');
-      
-      // Listen for 10 seconds
       final subscription = handshakeRef.onValue.listen((event) {
-        print('🔥 Firebase test - Event received: ${event.snapshot.value}');
-        
         if (event.snapshot.exists) {
           final data = event.snapshot.value;
-          print('🔥 Firebase test - Data exists: $data');
           
           if (data is Map<dynamic, dynamic>) {
             for (final entry in data.entries) {
               if (entry.value is Map) {
                 final handshakeData = Map<String, dynamic>.from(entry.value as Map);
-                print('🔥 Firebase test - Handshake: ${entry.key} -> $handshakeData');
                 
-                // Check if this handshake involves the current user
                 if (handshakeData['receiverId'] == currentUserId) {
-                  print('🔥 Firebase test - Found handshake for current user: $currentUserId');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('🎯 Found handshake for you from: ${handshakeData['callerId']}'),
@@ -520,15 +461,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
             }
           }
-        } else {
-          print('🔥 Firebase test - No data exists');
         }
       });
       
-      // Cancel after 10 seconds
       Future.delayed(const Duration(seconds: 10), () {
         subscription.cancel();
-        print('🔥 Firebase test - Listener cancelled after 10 seconds');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Firebase listener test completed! Check logs.'),
@@ -538,7 +475,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       });
       
     } catch (e) {
-      print('❌ Firebase listener test error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('❌ Firebase listener test failed: $e'),

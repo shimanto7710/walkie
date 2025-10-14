@@ -250,11 +250,9 @@ class _CallScreenState extends ConsumerState<CallScreen>
     _waveController.dispose();
     _swipeController.dispose();
     
-    // Reset call state
     final callNotifier = ref.read(callNotifierProvider.notifier);
     callNotifier.reset();
 
-    // WebRTC state is now managed by singleton service
     
     super.dispose();
   }

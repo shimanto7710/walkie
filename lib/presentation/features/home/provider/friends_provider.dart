@@ -11,35 +11,24 @@ part 'friends_provider.g.dart';
 class FriendsNotifier extends _$FriendsNotifier {
   @override
   Future<List<User>> build() async {
-    print("🚀 FriendsNotifier build() called - fetching friends data");
-    
-    // Watch auth state changes instead of reading once
     final authState = ref.watch(authProvider);
-    print("🔍 FriendsNotifier - Auth state: isAuthenticated=${authState.isAuthenticated}, currentUser=${authState.currentUser?.name}");
     
     if (!authState.isAuthenticated || authState.currentUser == null) {
-      print("❌ No authenticated user found - isAuthenticated: ${authState.isAuthenticated}, currentUser: ${authState.currentUser?.name}");
       return [];
     }
     
     final currentUserId = authState.currentUser!.id;
-    print("📱 Current user ID: $currentUserId");
     
-    // Get friends of current user
     final userRepository = getIt<UserRepository>();
     final result = await userRepository.getFriendsOfUser(currentUserId);
     
     if (result.isLeft()) {
-      print("❌ Error fetching friends: ${result.fold((l) => l.toString(), (r) => '')}");
       throw Exception(result.fold((l) => l.toString(), (r) => ''));
     }
     
     final friends = result.getOrElse(() => []);
-    print("✅ Friends fetched: ${friends.length} friends");
     
-    // Set up real-time listener for friends
     userRepository.watchFriendsOfUser(currentUserId).listen((realtimeFriends) {
-      print("🔄 Real-time friends update received: ${realtimeFriends.length} friends");
       state = AsyncValue.data(realtimeFriends);
     });
     
@@ -50,7 +39,6 @@ class FriendsNotifier extends _$FriendsNotifier {
 
 @riverpod
 Stream<List<User>> watchFriends(WatchFriendsRef ref) {
-  // Get current user from auth state
   final authState = ref.read(authProvider);
   if (!authState.isAuthenticated || authState.currentUser == null) {
     return Stream.value([]);

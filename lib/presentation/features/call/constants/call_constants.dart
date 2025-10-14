@@ -1,16 +1,13 @@
 class CallConstants {
-  // Handshake Status Values
   static const String callInitiate = 'call_initiate';
   static const String callAcknowledge = 'call_acknowledge';
   static const String closeCall = 'close_call';
   static const String ringing = 'ringing';
   static const String connected = 'connected';
   
-  // SDP Types
   static const String sdpOffer = 'offer';
   static const String sdpAnswer = 'answer';
   
-  // Log Messages - WebRTC
   static const String webRtcServiceNotInitialized = 'WebRTC service not initialized';
   static const String webRtcServiceInitializedSuccessfully = 'WebRTC service initialized successfully';
   static const String failedToInitializeWebRtcService = 'Failed to initialize WebRTC service';
@@ -31,7 +28,6 @@ class CallConstants {
   static const String iceCandidateAddedSuccessfully = 'ICE candidate added successfully';
   static const String failedToAddIceCandidate = 'Failed to add ICE candidate';
   
-  // Log Messages - Handshake
   static const String stoppingHandshakeListener = 'Stopping handshake listener';
   static const String handshakeInitiatedSuccessfully = 'Handshake initiated successfully';
   static const String errorInitiatingHandshake = 'Error initiating handshake';
@@ -42,7 +38,6 @@ class CallConstants {
   static const String ignoringCallAcknowledgeStatus = 'Ignoring call_acknowledge status (receiver should not handle this)';
   static const String errorListeningToHandshake = 'Error listening to handshake';
   
-  // Log Messages - Caller
   static const String webRtcServiceNotAvailableForMicrophone = 'WebRTC service not available for microphone toggle';
   static const String togglingMicrophone = 'Toggling microphone';
   static const String failedToToggleMicrophone = 'Failed to toggle microphone';
@@ -68,7 +63,6 @@ class CallConstants {
   static const String errorHandlingCallAcknowledge = 'Error handling call acknowledge';
   static const String failedToEstablishConnection = 'Failed to establish connection';
   
-  // Log Messages - Receiver
   static const String startingToListenToHandshake = 'Starting to listen to handshake between';
   static const String incomingCallDetected = 'Incoming call detected - starting to listen for handshake changes';
   static const String handshakeId = 'Handshake ID';
@@ -85,22 +79,18 @@ class CallConstants {
   static const String userHandshakeStreamError = 'User handshake stream error';
   static const String errorHandlingIncomingCall = 'Error handling incoming call';
   
-  // Log Messages - Call
   static const String callStateChanged = 'Call state changed';
   static const String callEndedNavigatingToHome = 'Call ended - navigating to home';
   
-  // Error Messages
   static const String sdpOfferCreationFailedMessage = 'SDP offer creation failed';
   static const String sdpAnswerCreationFailedMessage = 'SDP answer creation failed';
   static const String noSdpAnswerReceivedMessage = 'No SDP answer received';
   static const String failedToStartCallMessage = 'Failed to start call';
   static const String failedToEstablishConnectionMessage = 'Failed to establish connection';
   
-  // Microphone States
   static const String microphoneOn = 'ON';
   static const String microphoneOff = 'OFF';
   
-  // Role Names
   static const String callerRole = 'Caller';
   static const String receiverRole = 'Receiver';
   static const String webRtcRole = 'WebRTC';
@@ -108,19 +98,15 @@ class CallConstants {
   static const String callRole = 'Call';
   static const String firebaseRole = 'Firebase';
   
-  // SDP Logging
   static const String sdpType = 'SDP Type';
   static const String sdpLength = 'SDP Length';
   
-  // ICE Candidate Logging
   static const String iceCandidate = 'ICE Candidate';
   static const String sdpMid = 'SDP Mid';
   static const String sdpMLineIndex = 'SDP MLine Index';
   
-  // Timeout Messages
   static const String timeoutSeconds = 's timeout';
   
-  // Default Values
   static const String defaultSdpMid = '0';
   static const int defaultSdpMLineIndex = 0;
   static const String emptyString = '';
