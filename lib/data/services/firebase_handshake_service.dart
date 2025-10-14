@@ -2,8 +2,9 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../domain/entities/handshake.dart';
+import 'handshake_service.dart';
 
-class FirebaseHandshakeService {
+class FirebaseHandshakeService implements HandshakeService {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final String _handshakesPath = 'handshakes';
   
@@ -127,14 +128,14 @@ class FirebaseHandshakeService {
   }) async {
     try {
       final handshakeId = _generateHandshakeId(callerId, receiverId);
+      final updates = {
+        'status': status,
+        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+      };
       
       await _database
-          .ref('$_handshakesPath/$handshakeId/status')
-          .set(status);
-      
-      await _database
-          .ref('$_handshakesPath/$handshakeId/lastUpdated')
-          .set(DateTime.now().millisecondsSinceEpoch);
+          .ref('$_handshakesPath/$handshakeId')
+          .update(updates);
 
       print('✅ Handshake status updated: $status');
     } catch (e) {
@@ -173,6 +174,8 @@ class FirebaseHandshakeService {
     required String receiverId,
     required String status,
     required bool receiverIdSent,
+    RTCSessionDescription? answerSdp,
+    List<RTCIceCandidate>? receiverIceCandidates,
   }) async {
     try {
       final handshakeId = _generateHandshakeId(callerId, receiverId);
@@ -181,6 +184,21 @@ class FirebaseHandshakeService {
         'receiverIdSent': receiverIdSent,
         'lastUpdated': DateTime.now().millisecondsSinceEpoch,
       };
+      
+      // Add receiver's answer SDP if provided
+      if (answerSdp != null && answerSdp.sdp != null) {
+        updates['sdpAnswerFromReceiver'] = answerSdp.sdp!;
+      }
+      
+      // Add receiver's ICE candidates if provided
+      if (receiverIceCandidates != null && receiverIceCandidates.isNotEmpty) {
+        updates['iceCandidatesFromReceiver'] = receiverIceCandidates.map((c) => {
+          'type': 'candidate',
+          'candidate': c.candidate,
+          'sdpMid': c.sdpMid ?? '0',
+          'sdpMLineIndex': c.sdpMLineIndex ?? 0,
+        }).toList();
+      }
       
       await _database
           .ref('$_handshakesPath/$handshakeId')

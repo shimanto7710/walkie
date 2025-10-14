@@ -45,6 +45,50 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     );
   }
 
+  /// Toggle microphone on/off (business logic)
+  Future<void> toggleMicrophone(bool isEnabled) async {
+    try {
+      if (webrtcService == null) {
+        Utils.log('Caller', 'WebRTC service not available for microphone toggle');
+        return;
+      }
+
+      Utils.log('Caller', 'Toggling microphone: ${isEnabled ? "ON" : "OFF"}');
+      
+      final result = await webrtcService!.toggleMute();
+      result.fold(
+        (failure) {
+          Utils.log('Caller', 'Failed to toggle microphone: ${failure.message}');
+          // Update state to reflect failure
+          state = state.copyWith(
+            isMuted: !isEnabled, // Keep current state on failure
+          );
+        },
+        (_) {
+          Utils.log('Caller', 'Microphone toggled successfully: ${isEnabled ? "ON" : "OFF"}');
+          // Update state to reflect success
+          state = state.copyWith(
+            isMuted: !isEnabled,
+          );
+        },
+      );
+    } catch (e) {
+      Utils.log('Caller', 'Error toggling microphone: $e');
+    }
+  }
+
+  /// Start push-to-talk (business logic)
+  Future<void> startPushToTalk() async {
+    Utils.log('Caller', 'Starting push-to-talk');
+    await toggleMicrophone(true);
+  }
+
+  /// Stop push-to-talk (business logic)
+  Future<void> stopPushToTalk() async {
+    Utils.log('Caller', 'Stopping push-to-talk');
+    await toggleMicrophone(false);
+  }
+
   /// Close call and update Firebase status
   Future<void> closeCall({
     required String callerId,
@@ -53,7 +97,7 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     try {
       Utils.log('Caller', 'Closing call between $callerId and $receiverId');
       // Update Firebase status to 'close_call' using shared utility
-      await handshakeOperations?.updateHandshakeStatus(
+      await handshakeService?.updateHandshakeStatus(
         callerId: callerId,
         receiverId: receiverId,
         status: 'close_call',

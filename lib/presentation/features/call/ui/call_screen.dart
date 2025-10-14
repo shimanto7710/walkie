@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dartz/dartz.dart';
 import '../../../../core/utils/permissions_helper.dart';
 import '../../../../core/utils/Utils.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
-import '../../../../data/services/webrtc_service.dart';
 import '../provider/call_provider.dart';
 import '../../login/provider/auth_provider.dart';
-// WebRTC is now handled by singleton service in call_provider
 
 class CallScreen extends ConsumerStatefulWidget {
   final User friend;
@@ -44,7 +41,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
   void initState() {
     super.initState();
     
-    // Pulse animation for the call button
+
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -57,7 +54,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
       curve: Curves.easeInOut,
     ));
 
-    // Wave animation for the background
+
     _waveController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
@@ -70,14 +67,14 @@ class _CallScreenState extends ConsumerState<CallScreen>
       curve: Curves.easeInOut,
     ));
 
-    // Swipe up animation for the call button
+
     _swipeController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _swipeAnimation = Tween<Offset>(
       begin: Offset.zero,
-      end: const Offset(0, -0.3), // Move up by 30% of button height
+      end: const Offset(0, -0.3),
     ).animate(CurvedAnimation(
       parent: _swipeController,
       curve: Curves.easeOutBack,
@@ -88,28 +85,18 @@ class _CallScreenState extends ConsumerState<CallScreen>
     
     // Initialize WebRTC and permissions
     _initializeWebRTC();
-    
-    // Initialize Firebase handshake when entering call
-    // _initializeHandshake();
 
-    // No initialization needed for simple call UI
   }
 
   Future<void> _initializeWebRTC() async {
     try {
-      // Request permissions
       final hasAudioPermission = await PermissionsHelper.requestAudioPermissions();
       if (!hasAudioPermission) {
         _showPermissionDialog('Microphone permission is required for voice calls.');
         return;
       }
 
-      // WebRTC is now handled by singleton service in providers
-      // No need to initialize here as it's done in call_provider
-
       _initializeHandshake();
-
-      // Note: ref.listen calls are now handled in the build method
 
     } catch (e) {
       Utils.log('Call', 'Error initializing WebRTC: $e');
@@ -196,10 +183,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
     }
   }
 
-  void _startCall() {
-    final callNotifier = ref.read(callNotifierProvider.notifier);
-    callNotifier.startCall();
-  }
 
   void _acceptCall() {
     final callNotifier = ref.read(callNotifierProvider.notifier);
@@ -226,82 +209,26 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isHolding = true;
     });
     
-    // Start talking - enable microphone with delay to ensure UI is updated
+    // Start talking - delegate to provider (clean architecture)
     Future.delayed(const Duration(milliseconds: 100), () {
-      _toggleMicrophone(true);
+      ref.read(callNotifierProvider.notifier).startPushToTalk();
     });
   }
 
   void _onHoldEnd() {
-    
-    // Mic button should ALWAYS work as push-to-talk toggle
-    // Never ends the call, regardless of call state (sustained or not)
     if (!_isSwipeGesture) {
       setState(() {
         _isHolding = false;
       });
-      
-      
-      // Stop talking - disable microphone with delay
+
+      // Stop talking - delegate to provider (clean architecture)
       Future.delayed(const Duration(milliseconds: 100), () {
-        _toggleMicrophone(false);
+        ref.read(callNotifierProvider.notifier).stopPushToTalk();
       });
     } else {
     }
   }
 
-  /// Toggle microphone on/off for push-to-talk
-  void _toggleMicrophone(bool isEnabled) async {
-    try {
-      
-      // Try WebRTC approach first
-      bool webrtcSuccess = false;
-      try {
-        final webrtcService = FlutterWebRTCService.instance;
-        
-        // Print current WebRTC state safely
-        try {
-          webrtcService.printDebugInfo();
-        } catch (e) {
-        }
-        
-        // Call toggleMute with timeout
-        final result = await webrtcService.toggleMute().timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            return Left(Failure.unknownFailure('Operation timed out'));
-          },
-        );
-        
-        result.fold(
-          (failure) {
-            webrtcSuccess = false;
-          },
-          (_) {
-            webrtcSuccess = true;
-          },
-        );
-        
-      } catch (e) {
-        webrtcSuccess = false;
-      }
-      
-      // If WebRTC failed, try simple approach
-      if (!webrtcSuccess) {
-        try {
-          // Just update UI state without WebRTC
-          setState(() {
-            // Update visual state only
-          });
-        } catch (e) {
-        }
-      }
-      
-      
-    } catch (e) {
-      // Don't rethrow the error to prevent app crash
-    }
-  }
 
   void _onSwipeUp() {
     setState(() {
@@ -341,20 +268,15 @@ class _CallScreenState extends ConsumerState<CallScreen>
     // Reset the swipe animation
     _swipeController.reset();
 
-    // Navigation to home will be handled by the call state listener
   }
-
-  // WebRTC operations are now handled by singleton service in call_provider
 
   @override
   Widget build(BuildContext context) {
-    // Listen to simple call state changes
     ref.listen<CallState>(callNotifierProvider, (previous, next) {
       Utils.log('Call', 'Call state changed: ${previous?.status} -> ${next.status}');
       
       if (next.status == CallStatus.connected) {
         setState(() {
-          // Update UI to show connection is established
         });
       } else if (next.status == CallStatus.ended) {
         // Navigate to home when call ends (either by user action or remote close)
@@ -363,10 +285,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
       }
     });
 
-    // WebRTC call state changes are now handled by call_provider
-
-    // Handshake changes are now handled within the CallNotifier
-
     final callState = ref.watch(callNotifierProvider);
     
     return Scaffold(
@@ -374,10 +292,8 @@ class _CallScreenState extends ConsumerState<CallScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Header with friend info and end call button
             _buildHeader(),
-            
-            // Main content area
+
             Expanded(
               child: _buildMainContent(callState),
             ),
@@ -611,22 +527,16 @@ class _CallScreenState extends ConsumerState<CallScreen>
               _onHoldStart();
             },
             onPointerUp: (details) {
-              
               if (!_isSwipeGesture) {
                 _onHoldEnd();
               } else {
               }
             },
             onPointerCancel: (details) {
-
-              
               if (!_isSwipeGesture) {
-
                 _onHoldEnd();
               } else {
-
               }
-              
             },
             onPointerMove: (details) {
               // Check for swipe up gesture

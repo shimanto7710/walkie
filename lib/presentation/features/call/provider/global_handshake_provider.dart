@@ -117,7 +117,7 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
   Future<void> _handleIncomingCall(Handshake handshake, RTCSessionDescription? answerSdp, List<RTCIceCandidate> receiverIceCandidates) async {
     try {
       // Update Firebase status and receiverIdSent in a single operation using shared utility
-      await handshakeOperations?.updateHandshakeStatusAndReceiverSent(
+      await handshakeService?.updateHandshakeStatusAndReceiverSent(
         callerId: handshake.callerId,
         receiverId: handshake.receiverId,
         status: 'call_acknowledge',

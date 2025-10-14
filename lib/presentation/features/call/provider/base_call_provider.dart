@@ -2,21 +2,19 @@ import 'dart:async';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:walkie/core/utils/Utils.dart';
 import '../../../../domain/entities/handshake.dart';
+import '../../../../data/services/handshake_service.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
-import '../../../../data/services/handshake_operations.dart';
 import '../../../../data/services/webrtc_service.dart';
 
 /// Mixin for common call functionality shared between providers
 mixin BaseCallProvider {
   // Common services
-  FirebaseHandshakeService? _handshakeService;
-  HandshakeOperations? _handshakeOperations;
+  HandshakeService? _handshakeService;
   WebRTCService? _webrtcService;
   StreamSubscription<Handshake>? _handshakeSubscription;
 
   // Getters for subclasses
-  FirebaseHandshakeService? get handshakeService => _handshakeService;
-  HandshakeOperations? get handshakeOperations => _handshakeOperations;
+  HandshakeService? get handshakeService => _handshakeService;
   WebRTCService? get webrtcService => _webrtcService;
   StreamSubscription<Handshake>? get handshakeSubscription => _handshakeSubscription;
   
@@ -28,7 +26,6 @@ mixin BaseCallProvider {
   /// Initialize common services
   void initializeServices() {
     _handshakeService = FirebaseHandshakeService();
-    _handshakeOperations = HandshakeOperations();
     _webrtcService = FlutterWebRTCService.instance;
   }
 
