@@ -6,6 +6,7 @@ import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../domain/entities/webrtc_media_stream.dart';
 import 'base_call_provider.dart';
+import '../constants/call_constants.dart';
 
 part 'call_provider.g.dart';
 
@@ -17,7 +18,6 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
   @override
   CallState build() {
     initializeServices();
-    // Initialize WebRTC service asynchronously
     initializeWebRTC();
     return const CallState();
   }
@@ -45,71 +45,58 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     );
   }
 
-  /// Toggle microphone on/off (business logic)
   Future<void> toggleMicrophone(bool isEnabled) async {
     try {
       if (webrtcService == null) {
-        Utils.log('Caller', 'WebRTC service not available for microphone toggle');
+        Utils.log(CallConstants.callerRole, CallConstants.webRtcServiceNotAvailableForMicrophone);
         return;
       }
 
-      Utils.log('Caller', 'Toggling microphone: ${isEnabled ? "ON" : "OFF"}');
+      Utils.log(CallConstants.callerRole, '${CallConstants.togglingMicrophone}: ${isEnabled ? CallConstants.microphoneOn : CallConstants.microphoneOff}');
       
       final result = await webrtcService!.toggleMute();
       result.fold(
         (failure) {
-          Utils.log('Caller', 'Failed to toggle microphone: ${failure.message}');
-          // Update state to reflect failure
-          state = state.copyWith(
-            isMuted: !isEnabled, // Keep current state on failure
-          );
+          Utils.log(CallConstants.callerRole, '${CallConstants.failedToToggleMicrophone}: ${failure.message}');
+          state = state.copyWith(isMuted: !isEnabled);
         },
         (_) {
-          Utils.log('Caller', 'Microphone toggled successfully: ${isEnabled ? "ON" : "OFF"}');
-          // Update state to reflect success
-          state = state.copyWith(
-            isMuted: !isEnabled,
-          );
+          Utils.log(CallConstants.callerRole, '${CallConstants.microphoneToggledSuccessfully}: ${isEnabled ? CallConstants.microphoneOn : CallConstants.microphoneOff}');
+          state = state.copyWith(isMuted: !isEnabled);
         },
       );
     } catch (e) {
-      Utils.log('Caller', 'Error toggling microphone: $e');
+      Utils.log(CallConstants.callerRole, '${CallConstants.errorTogglingMicrophone}: $e');
     }
   }
 
-  /// Start push-to-talk (business logic)
   Future<void> startPushToTalk() async {
-    Utils.log('Caller', 'Starting push-to-talk');
+    Utils.log(CallConstants.callerRole, CallConstants.startingPushToTalk);
     await toggleMicrophone(true);
   }
 
-  /// Stop push-to-talk (business logic)
   Future<void> stopPushToTalk() async {
-    Utils.log('Caller', 'Stopping push-to-talk');
+    Utils.log(CallConstants.callerRole, CallConstants.stoppingPushToTalk);
     await toggleMicrophone(false);
   }
 
-  /// Close call and update Firebase status
   Future<void> closeCall({
     required String callerId,
     required String receiverId,
   }) async {
     try {
-      Utils.log('Caller', 'Closing call between $callerId and $receiverId');
-      // Update Firebase status to 'close_call' using shared utility
+      Utils.log(CallConstants.callerRole, '${CallConstants.closingCallBetween} $callerId and $receiverId');
       await handshakeService?.updateHandshakeStatus(
         callerId: callerId,
         receiverId: receiverId,
-        status: 'close_call',
+        status: CallConstants.closeCall,
       );
 
-      // Update local state
       state = state.copyWith(
         status: CallStatus.ended,
         isConnecting: false,
         isConnected: false,
       );
-
     } catch (e) {
       state = state.copyWith(
         status: CallStatus.ended,
@@ -124,25 +111,21 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     state = const CallState();
   }
 
-  /// Initialize Firebase handshake when entering call
   Future<void> initiateHandshake({
     required String callerId,
     required String receiverId,
   }) async {
     try {
-      Utils.log('Caller', '$callerId Initiating handshake between $callerId and $receiverId');
-      // Create SDP and ICE for caller
+      Utils.log(CallConstants.callerRole, '$callerId ${CallConstants.initiatingHandshakeBetween} $callerId and $receiverId');
+      
       final sdpOffer = await createSdpOffer();
-
-      // Set local description to start ICE gathering
       if (sdpOffer != null) {
-        // Utils.log('Caller', '$callerId Local SDP Offer: ${sdpOffer.sdp}');
-        Utils.log('Caller', '$callerId Setting local description with SDP offer');
+        Utils.log(CallConstants.callerRole, '$callerId ${CallConstants.settingLocalDescriptionWithSdpOffer}');
         await setLocalDescription(sdpOffer);
       }
       
       final iceCandidates = await gatherIceCandidates();
-      Utils.log('Caller', '$callerId Gathered ${iceCandidates.length} ICE candidates');
+      Utils.log(CallConstants.callerRole, '$callerId ${CallConstants.gatheredIceCandidatesCount} ${iceCandidates.length} ICE candidates');
 
       await handshakeService?.initiateHandshake(
         callerId: callerId,
@@ -151,26 +134,22 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
         iceCandidates: iceCandidates,
       );
 
-      // Start listening to handshake changes
       _startListening(callerId: callerId, receiverId: receiverId, isCaller: true);
-
-      Utils.log('Caller', '$callerId Handshake initiated successfully between $callerId and $receiverId');
+      Utils.log(CallConstants.callerRole, '$callerId ${CallConstants.handshakeInitiatedSuccessfully}');
     } catch (e) {
-      Utils.log('Caller', '$callerId Error initiating handshake: $e');
+      Utils.log(CallConstants.callerRole, '$callerId ${CallConstants.errorInitiatingHandshake}: $e');
       rethrow;
     }
   }
 
-  /// Start listening to handshake data changes (public method for incoming calls)
   void startListeningToHandshake({
     required String callerId,
     required String receiverId,
   }) {
-    Utils.log('Receiver', '$receiverId Starting to listen to handshake between $callerId and $receiverId');
+    Utils.log(CallConstants.receiverRole, '$receiverId ${CallConstants.startingToListenToHandshake} $callerId and $receiverId');
     _startListening(callerId: callerId, receiverId: receiverId, isCaller: false);
   }
 
-  /// Start listening to handshake data changes
   void _startListening({
     required String callerId,
     required String receiverId,
@@ -178,16 +157,14 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
   }) async {
     stopListening();
 
-    // Store current call participants
     _currentCallerId = callerId;
     _currentReceiverId = receiverId;
 
-    final role = isCaller ? 'Caller' : 'Receiver';
+    final role = isCaller ? CallConstants.callerRole : CallConstants.receiverRole;
     final userId = isCaller ? callerId : receiverId;
     
-    Utils.log(role, '$userId Starting to listen to handshake changes (Role: $role)');
+    Utils.log(role, '$userId ${CallConstants.startingToListenToHandshakeChanges.replaceAll('role', role)}');
 
-    // Pass SDP and ICE values to handshake
     handshakeSubscription = handshakeService!
         .listenToHandshake(
       callerId: callerId,
@@ -195,132 +172,121 @@ class CallNotifier extends _$CallNotifier with BaseCallProvider {
     )
         .listen(
       (handshake) {
-        Utils.log(role, '$userId Received handshake status: ${handshake.status}');
+        Utils.log(role, '$userId ${CallConstants.receivedHandshakeStatus}: ${handshake.status}');
         
-        // Handle close_call status - both parties should handle this
-        if (handshake.status == 'close_call') {
-          Utils.log(role, '$userId Call closed by remote party');
+        if (handshake.status == CallConstants.closeCall) {
+          Utils.log(role, '$userId ${CallConstants.callClosedByRemoteParty}');
           endCall();
-        } 
-        // Only CALLER handles call_acknowledge status
-        else if (handshake.status == "call_acknowledge") {
+        } else if (handshake.status == CallConstants.callAcknowledge) {
           if (isCaller) {
-            Utils.log(role, '$userId Handling call acknowledgment from receiver');
+            Utils.log(role, '$userId ${CallConstants.handlingCallAcknowledgment}');
             _handleCallAcknowledge(handshake);
           } else {
-            Utils.log(role, '$userId Ignoring call_acknowledge status (receiver should not handle this)');
+            Utils.log(role, '$userId ${CallConstants.ignoringCallAcknowledgeStatus}');
           }
         }
-        // Add other status handling here as needed
-        // Only RECEIVER should handle certain statuses, only CALLER should handle others
       },
       onError: (error) {
-        Utils.log(role, 'Error listening to handshake: $error');
+        Utils.log(role, '${CallConstants.errorListeningToHandshake}: $error');
       },
     );
   }
 
 
-  /// Handle call acknowledge - set remote SDP and add ICE candidates
   Future<void> _handleCallAcknowledge(Handshake handshake) async {
     try {
       if (webrtcService == null) {
-        Utils.log('Caller', 'WebRTC service not initialized');
+        Utils.log(CallConstants.callerRole, CallConstants.webRtcServiceNotInitialized);
         return;
       }
 
-      // Ensure WebRTC service is properly initialized
       await initializeWebRTC();
-
-      // Set remote description with receiver's SDP answer
-      if (handshake.sdpAnswer != null) {
-        // Utils.log('Caller', '${handshake.callerId} Setting remote description with SDP answer '+handshake.sdpAnswer!);
-        final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, 'answer');
-        await setRemoteDescription(remoteDescription);
-      } else {
-        Utils.log('Caller', 'No SDP answer received from receiver');
-        return;
-      }
-
-      // Add receiver's ICE candidates
-      if (handshake.iceCandidatesFromReceiver != null && handshake.iceCandidatesFromReceiver!.isNotEmpty) {
-        Utils.log('Caller', 'Adding ${handshake.iceCandidatesFromReceiver!.length} ICE candidates from receiver');
-        
-        for (final iceData in handshake.iceCandidatesFromReceiver!) {
-          try {
-            final candidate = RTCIceCandidate(
-              iceData['candidate'] ?? '',
-              iceData['sdpMid'] ?? '0',
-              iceData['sdpMLineIndex'] ?? 0,
-            );
-            
-            await addIceCandidate(candidate);
-          } catch (e) {
-            Utils.log('Caller', 'Error adding ICE candidate: $e');
-          }
-        }
-      } else {
-       Utils.log('Caller', 'No ICE candidates received from receiver');
-      }
-
-      // Ensure we have local media stream for the call
-      final mediaResult = await webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
-      if (mediaResult.isRight()) {
-        Utils.log('Caller', 'Local media stream obtained successfully');
-        
-        // Add local stream to peer connection - this is crucial for call initiation
-        final addStreamResult = await webrtcService!.addLocalStreamToPeerConnection();
-        addStreamResult.fold(
-          (failure) {
-            Utils.log('Caller', 'Failed to add local audio stream to peer connection: ${failure.message}');
-          },
-          (_) {
-            Utils.log('Caller', 'Local audio stream added to peer connection successfully');
-          },
-        );
-      } else {
-        Utils.log('Caller', 'Failed to obtain local media stream');
-      }
-
-      // Call is now ready - SDP and ICE exchange completed
-      Utils.log('Caller', 'Call acknowledged by receiver, proceeding to establish connection');
-
-      final callResult = await webrtcService!.startCall(_currentReceiverId ?? '');
-      callResult.fold(
-        (failure) {
-          Utils.log('Caller', 'Failed to start call: ${failure.message}');
-          state = state.copyWith(
-            status: CallStatus.failed,
-            isConnecting: false,
-            isConnected: false,
-            errorMessage: 'Failed to start call: ${failure.message}',
-          );
-        },
-        (_) {
-          Utils.log('Caller', 'WebRTC Call established successfully');
-          
-          // Update call state to connected
-          state = state.copyWith(
-            status: CallStatus.connected,
-            isConnecting: false,
-            isConnected: true,
-          );
-
-        },
-      );
-
+      await _processSdpAnswer(handshake);
+      await _processIceCandidates(handshake);
+      await _setupLocalMediaStream();
+      await _establishCall();
     } catch (e) {
-      Utils.log('Caller', 'Error handling call acknowledge: $e');
-      state = state.copyWith(
-        status: CallStatus.failed,
-        isConnecting: false,
-        isConnected: false,
-        errorMessage: 'Failed to establish connection: $e',
-      );
+      Utils.log(CallConstants.callerRole, '${CallConstants.errorHandlingCallAcknowledge}: $e');
+      _updateCallStateToFailed('${CallConstants.failedToEstablishConnectionMessage}: $e');
     }
   }
 
-  /// Dispose resources
+  Future<void> _processSdpAnswer(Handshake handshake) async {
+    if (handshake.sdpAnswer == null) {
+      Utils.log(CallConstants.callerRole, CallConstants.noSdpAnswerReceived);
+      throw Exception(CallConstants.noSdpAnswerReceivedMessage);
+    }
+
+    final remoteDescription = RTCSessionDescription(handshake.sdpAnswer!, CallConstants.sdpAnswer);
+    await setRemoteDescription(remoteDescription);
+  }
+
+  Future<void> _processIceCandidates(Handshake handshake) async {
+    if (handshake.iceCandidatesFromReceiver == null || handshake.iceCandidatesFromReceiver!.isEmpty) {
+      Utils.log(CallConstants.callerRole, CallConstants.noIceCandidatesReceivedFromReceiver);
+      return;
+    }
+
+    Utils.log(CallConstants.callerRole, '${CallConstants.addingIceCandidatesFromReceiver} ${handshake.iceCandidatesFromReceiver!.length} ICE candidates from receiver');
+    
+    for (final iceData in handshake.iceCandidatesFromReceiver!) {
+      try {
+        final candidate = RTCIceCandidate(
+          iceData['candidate'] ?? CallConstants.emptyString,
+          iceData['sdpMid'] ?? CallConstants.defaultSdpMid,
+          iceData['sdpMLineIndex'] ?? CallConstants.defaultSdpMLineIndex,
+        );
+        await addIceCandidate(candidate);
+      } catch (e) {
+        Utils.log(CallConstants.callerRole, '${CallConstants.errorAddingIceCandidate}: $e');
+      }
+    }
+  }
+
+  Future<void> _setupLocalMediaStream() async {
+    final mediaResult = await webrtcService!.getUserMedia(const WebRTCMediaConstraints(audio: true));
+    if (mediaResult.isRight()) {
+      Utils.log(CallConstants.callerRole, CallConstants.localMediaStreamObtainedSuccessfully);
+      
+      final addStreamResult = await webrtcService!.addLocalStreamToPeerConnection();
+      addStreamResult.fold(
+        (failure) => Utils.log(CallConstants.callerRole, '${CallConstants.failedToAddLocalAudioStream}: ${failure.message}'),
+        (_) => Utils.log(CallConstants.callerRole, CallConstants.localAudioStreamAddedSuccessfully),
+      );
+    } else {
+      Utils.log(CallConstants.callerRole, CallConstants.failedToObtainLocalMediaStream);
+    }
+  }
+
+  Future<void> _establishCall() async {
+    Utils.log(CallConstants.callerRole, CallConstants.callAcknowledgedByReceiver);
+
+    final callResult = await webrtcService!.startCall(_currentReceiverId ?? CallConstants.emptyString);
+    callResult.fold(
+      (failure) {
+        Utils.log(CallConstants.callerRole, '${CallConstants.failedToStartCall}: ${failure.message}');
+        _updateCallStateToFailed('${CallConstants.failedToStartCallMessage}: ${failure.message}');
+      },
+      (_) {
+        Utils.log(CallConstants.callerRole, CallConstants.webRtcCallEstablishedSuccessfully);
+        state = state.copyWith(
+          status: CallStatus.connected,
+          isConnecting: false,
+          isConnected: true,
+        );
+      },
+    );
+  }
+
+  void _updateCallStateToFailed(String errorMessage) {
+    state = state.copyWith(
+      status: CallStatus.failed,
+      isConnecting: false,
+      isConnected: false,
+      errorMessage: errorMessage,
+    );
+  }
+
   @override
   void dispose() {
     super.dispose();

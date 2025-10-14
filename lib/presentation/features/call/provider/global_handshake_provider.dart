@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../../domain/entities/handshake.dart';
 import '../../../../core/utils/Utils.dart';
 import 'base_call_provider.dart';
+import '../constants/call_constants.dart';
 
 part 'global_handshake_provider.g.dart';
 
@@ -18,131 +19,125 @@ class GlobalHandshakeNotifier extends _$GlobalHandshakeNotifier with BaseCallPro
   }
 
 
-  /// Listen to handshake changes for a specific user (as caller or receiver)
   void listenForUserHandshakes(String userId) {
     stopListening();
     
-    // Listen to all handshakes where this user is either caller or receiver
     handshakeSubscription = handshakeService!
         .listenToUserHandshakes(userId)
         .listen(
           (handshake) async {
             state = handshake;
             
-            // Check if current user is the receiver and call is initiated
-            if (handshake.receiverId == userId && 
-                handshake.status == 'call_initiate' && 
-                !handshake.receiverIdSent) {
-              
-              // Initialize WebRTC service if needed
-              await initializeWebRTC();
-              
-              // Set remote description with caller's SDP
-              if (handshake.sdpOffer != null) {
-                final remoteDescription = RTCSessionDescription(handshake.sdpOffer!, 'offer');
-                await setRemoteDescription(remoteDescription);
-              }
-              
-              // Create answer SDP
-              final answerSdp = await createSdpAnswer();
-              if (answerSdp != null) {
-                await setLocalDescription(answerSdp);
-              }
-              
-              // Add caller's ICE candidates
-              if (handshake.iceCandidates != null) {
-                for (final iceData in handshake.iceCandidates!) {
-                  final candidate = RTCIceCandidate(
-                    iceData['candidate'],
-                    iceData['sdpMid'] ?? '0',
-                    iceData['sdpMLineIndex'] ?? 0,
-                  );
-                  await addIceCandidate(candidate);
-                }
-                Utils.log('Receiver', 'Added ${handshake.iceCandidates!.length} ICE candidates from caller');
-              }
-              
-              // Get receiver's ICE candidates
-              final receiverIceCandidates = await gatherIceCandidates();
-
-
-              final addStreamResult = await webrtcService?.addLocalStreamToPeerConnection();
-              addStreamResult?.fold(
-                (failure) {
-                  Utils.log('Receiver', 'Failed to add local stream to peer connection: ${failure.message}');
-                },
-                (_) {
-                  Utils.log('Receiver', 'Local audio stream added to peer connection for incoming call');
-                },
-              );
-
-              // Call is now ready - SDP and ICE exchange completed
-              Utils.log('Receiver', 'Incoming call is ready - SDP and ICE exchange completed');
-
-              // Now initiate the actual call using WebRTC service
-              Utils.log('Receiver', 'Initiating incoming call...');
-              final callResult = await webrtcService?.acceptCall();
-              callResult?.fold(
-                (failure) {
-                  Utils.log('Receiver', 'Failed to accept call: ${failure.message}');
-                },
-                (_) {
-                  Utils.log('Receiver', 'Incoming call accepted successfully');
-                },
-              );
-
-              // Only proceed if we have valid data
-              if (answerSdp?.sdp != null) {
-                // Update Firebase: change status to 'call_acknowledge' and set receiverIdSent to true
-                _handleIncomingCall(handshake, answerSdp, receiverIceCandidates);
-              } else {
-                Utils.log('Receiver', 'Cannot proceed: Answer SDP is missing');
-              }
+            if (_shouldProcessIncomingCall(handshake, userId)) {
+              await _processIncomingCall(handshake);
             }
             
-            // Handle close_call status for both caller and receiver
-            if (handshake.status == 'close_call' && 
-                (handshake.callerId == userId || handshake.receiverId == userId)) {
-              Utils.log('Receiver', 'Close call detected in global provider for user: $userId');
-              // The call screen will handle the actual call ending
+            if (_shouldHandleCloseCall(handshake, userId)) {
+              Utils.log(CallConstants.receiverRole, '${CallConstants.closeCallDetectedInGlobalProvider}: $userId');
             }
           },
           onError: (error) {
-            Utils.log('Receiver', 'User handshake stream error: $error');
+            Utils.log(CallConstants.receiverRole, '${CallConstants.userHandshakeStreamError}: $error');
           },
         );
   }
 
-  /// Handle incoming call: update Firebase and trigger navigation
+  bool _shouldProcessIncomingCall(Handshake handshake, String userId) {
+    return handshake.receiverId == userId && 
+           handshake.status == CallConstants.callInitiate && 
+           !handshake.receiverIdSent;
+  }
+
+  bool _shouldHandleCloseCall(Handshake handshake, String userId) {
+    return handshake.status == CallConstants.closeCall && 
+           (handshake.callerId == userId || handshake.receiverId == userId);
+  }
+
+  Future<void> _processIncomingCall(Handshake handshake) async {
+    await initializeWebRTC();
+    await _setupRemoteDescription(handshake);
+    final answerSdp = await _createAnswerSdp();
+    await _processCallerIceCandidates(handshake);
+    final receiverIceCandidates = await gatherIceCandidates();
+    await _setupLocalMediaStream();
+    await _acceptIncomingCall();
+    
+    if (answerSdp?.sdp != null) {
+      await _handleIncomingCall(handshake, answerSdp, receiverIceCandidates);
+    } else {
+      Utils.log(CallConstants.receiverRole, CallConstants.cannotProceedAnswerSdpMissing);
+    }
+  }
+
+  Future<void> _setupRemoteDescription(Handshake handshake) async {
+    if (handshake.sdpOffer != null) {
+      final remoteDescription = RTCSessionDescription(handshake.sdpOffer!, CallConstants.sdpOffer);
+      await setRemoteDescription(remoteDescription);
+    }
+  }
+
+  Future<RTCSessionDescription?> _createAnswerSdp() async {
+    final answerSdp = await createSdpAnswer();
+    if (answerSdp != null) {
+      await setLocalDescription(answerSdp);
+    }
+    return answerSdp;
+  }
+
+  Future<void> _processCallerIceCandidates(Handshake handshake) async {
+    if (handshake.iceCandidates == null) return;
+    
+    for (final iceData in handshake.iceCandidates!) {
+      final candidate = RTCIceCandidate(
+        iceData['candidate'],
+        iceData['sdpMid'] ?? CallConstants.defaultSdpMid,
+        iceData['sdpMLineIndex'] ?? CallConstants.defaultSdpMLineIndex,
+      );
+      await addIceCandidate(candidate);
+    }
+    Utils.log(CallConstants.receiverRole, '${CallConstants.addedIceCandidatesFromCaller} ${handshake.iceCandidates!.length} ICE candidates from caller');
+  }
+
+  Future<void> _setupLocalMediaStream() async {
+    final addStreamResult = await webrtcService?.addLocalStreamToPeerConnection();
+    addStreamResult?.fold(
+      (failure) => Utils.log(CallConstants.receiverRole, '${CallConstants.failedToAddLocalStream}: ${failure.message}'),
+      (_) => Utils.log(CallConstants.receiverRole, CallConstants.localAudioStreamAddedForIncomingCall),
+    );
+  }
+
+  Future<void> _acceptIncomingCall() async {
+    Utils.log(CallConstants.receiverRole, CallConstants.incomingCallIsReady);
+    Utils.log(CallConstants.receiverRole, CallConstants.initiatingIncomingCall);
+    
+    final callResult = await webrtcService?.acceptCall();
+    callResult?.fold(
+      (failure) => Utils.log(CallConstants.receiverRole, '${CallConstants.failedToAcceptCall}: ${failure.message}'),
+      (_) => Utils.log(CallConstants.receiverRole, CallConstants.incomingCallAcceptedSuccessfully),
+    );
+  }
+
   Future<void> _handleIncomingCall(Handshake handshake, RTCSessionDescription? answerSdp, List<RTCIceCandidate> receiverIceCandidates) async {
     try {
-      // Update Firebase status and receiverIdSent in a single operation using shared utility
       await handshakeService?.updateHandshakeStatusAndReceiverSent(
         callerId: handshake.callerId,
         receiverId: handshake.receiverId,
-        status: 'call_acknowledge',
+        status: CallConstants.callAcknowledge,
         receiverIdSent: true,
         answerSdp: answerSdp,
         receiverIceCandidates: receiverIceCandidates,
       );
-      
-
-      // Note: Navigation to calling screen should be handled by the UI layer
-      // The provider just updates the state, UI listens and navigates
-      
     } catch (e) {
-      Utils.log('Receiver', 'Error handling incoming call: $e');
+      Utils.log(CallConstants.receiverRole, '${CallConstants.errorHandlingIncomingCall}: $e');
     }
   }
 
-  /// Stop listening and reset state
   void stopListeningAndReset() {
     stopListening();
     _currentHandshakeId = null;
     state = null;
   }
 
-  /// Dispose resources
   @override
   void dispose() {
     super.dispose();

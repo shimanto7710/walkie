@@ -5,244 +5,199 @@ import '../../../../domain/entities/handshake.dart';
 import '../../../../data/services/handshake_service.dart';
 import '../../../../data/services/firebase_handshake_service.dart';
 import '../../../../data/services/webrtc_service.dart';
+import '../constants/call_constants.dart';
 
-/// Mixin for common call functionality shared between providers
 mixin BaseCallProvider {
-  // Common services
+  static const Duration _iceGatheringTimeout = Duration(seconds: 3);
+  static const Duration _iceGatheringCheckInterval = Duration(milliseconds: 100);
+  
   HandshakeService? _handshakeService;
   WebRTCService? _webrtcService;
   StreamSubscription<Handshake>? _handshakeSubscription;
 
-  // Getters for subclasses
   HandshakeService? get handshakeService => _handshakeService;
   WebRTCService? get webrtcService => _webrtcService;
   StreamSubscription<Handshake>? get handshakeSubscription => _handshakeSubscription;
   
-  // Setter for handshake subscription
   set handshakeSubscription(StreamSubscription<Handshake>? subscription) {
     _handshakeSubscription = subscription;
   }
 
-  /// Initialize common services
   void initializeServices() {
     _handshakeService = FirebaseHandshakeService();
     _webrtcService = FlutterWebRTCService.instance;
   }
 
-  /// Initialize WebRTC service with error handling
   Future<void> initializeWebRTC() async {
-    if (_webrtcService != null) {
-      final result = await _webrtcService!.initialize();
-      result.fold(
-        (failure) => Utils.log('WebRTC', 'Failed to initialize WebRTC service: ${failure.message}'),
-        (_) => Utils.log('WebRTC', 'WebRTC service initialized successfully'),
-      );
-    }
+    if (_webrtcService == null) return;
+    
+    final result = await _webrtcService!.initialize();
+    result.fold(
+      (failure) => Utils.log(CallConstants.webRtcRole, '${CallConstants.failedToInitializeWebRtcService}: ${failure.message}'),
+      (_) => Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceInitializedSuccessfully),
+    );
   }
 
-  /// Handle WebRTC errors consistently
-  void handleWebRTCError(String operation, dynamic error) {
-    Utils.log('WebRTC', 'WebRTC $operation error: $error');
+  void _logWebRTCError(String operation, dynamic error) {
+    Utils.log(CallConstants.webRtcRole, '${CallConstants.webRtcOperationError}: $operation - $error');
   }
 
-  /// Create SDP offer with error handling
   Future<RTCSessionDescription?> createSdpOffer() async {
     try {
       if (_webrtcService == null) {
-        Utils.log('WebRTC', 'WebRTC service not initialized');
+        Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceNotInitialized);
         return null;
       }
 
-      Utils.log('WebRTC', '=== SDP OFFER CREATION ===');
+      Utils.log(CallConstants.webRtcRole, CallConstants.creatingSdpOffer);
       final offerResult = await _webrtcService!.createOffer();
-      RTCSessionDescription? sdpOffer;
       
-      offerResult.fold(
+      return offerResult.fold(
         (failure) {
-          Utils.log('WebRTC', 'Failed to create offer: ${failure.message}');
-          throw Exception('SDP offer creation failed: ${failure.message}');
+          Utils.log(CallConstants.webRtcRole, 'Failed to create offer: ${failure.message}');
+          throw Exception('${CallConstants.sdpOfferCreationFailedMessage}: ${failure.message}');
         },
         (offer) {
-          sdpOffer = offer;
-          Utils.log('WebRTC', 'SDP offer created successfully');
-          Utils.log('WebRTC', 'SDP Type: ${offer.type}');
-          Utils.log('WebRTC', 'SDP Length: ${offer.sdp?.length ?? 0} characters');
-          Utils.log('WebRTC', 'SDP Preview: ${offer.sdp?.substring(0, 100)}...');
-          Utils.log('WebRTC', '=== END SDP OFFER ===');
+          Utils.log(CallConstants.webRtcRole, CallConstants.sdpOfferCreatedSuccessfully);
+          Utils.log(CallConstants.webRtcRole, '${CallConstants.sdpType}: ${offer.type}, ${CallConstants.sdpLength}: ${offer.sdp?.length ?? 0}');
+          return offer;
         },
       );
-
-      return sdpOffer;
     } catch (e) {
-      handleWebRTCError('createSdpOffer', e);
+      _logWebRTCError('createSdpOffer', e);
       return null;
     }
   }
 
-  /// Create SDP answer with error handling
   Future<RTCSessionDescription?> createSdpAnswer() async {
     try {
       if (_webrtcService == null) {
-        Utils.log('WebRTC', 'WebRTC service not initialized');
+        Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceNotInitialized);
         return null;
       }
 
-      Utils.log('WebRTC', '=== SDP ANSWER CREATION ===');
+      Utils.log(CallConstants.webRtcRole, CallConstants.creatingSdpAnswer);
       final answerResult = await _webrtcService!.createAnswer();
-      RTCSessionDescription? sdpAnswer;
       
-      answerResult.fold(
+      return answerResult.fold(
         (failure) {
-          Utils.log('WebRTC', 'Failed to create answer: ${failure.message}');
-          throw Exception('SDP answer creation failed: ${failure.message}');
+          Utils.log(CallConstants.webRtcRole, 'Failed to create answer: ${failure.message}');
+          throw Exception('${CallConstants.sdpAnswerCreationFailedMessage}: ${failure.message}');
         },
         (answer) {
-          sdpAnswer = answer;
-          Utils.log('WebRTC', 'SDP answer created successfully');
-          Utils.log('WebRTC', 'SDP Type: ${answer.type}');
-          Utils.log('WebRTC', 'SDP Length: ${answer.sdp?.length ?? 0} characters');
-          Utils.log('WebRTC', 'SDP Preview: ${answer.sdp?.substring(0, 100)}...');
-          Utils.log('WebRTC', '=== END SDP ANSWER ===');
+          Utils.log(CallConstants.webRtcRole, CallConstants.sdpAnswerCreatedSuccessfully);
+          Utils.log(CallConstants.webRtcRole, '${CallConstants.sdpType}: ${answer.type}, ${CallConstants.sdpLength}: ${answer.sdp?.length ?? 0}');
+          return answer;
         },
       );
-
-      return sdpAnswer;
     } catch (e) {
-      handleWebRTCError('createSdpAnswer', e);
+      _logWebRTCError('createSdpAnswer', e);
       return null;
     }
   }
 
-  /// Gather ICE candidates with timeout
   Future<List<RTCIceCandidate>> gatherIceCandidates() async {
-    List<RTCIceCandidate> iceCandidates = [];
-    
     if (_webrtcService == null) {
-      print('❌ WebRTC service not initialized');
-      return iceCandidates;
+      Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceNotInitialized);
+      return [];
     }
     
-    Utils.log('WebRTC', '=== ICE CANDIDATE GATHERING ===');
-    Utils.log('WebRTC', 'Starting ICE candidate gathering...');
+    Utils.log(CallConstants.webRtcRole, CallConstants.gatheringIceCandidates);
     
-    // Wait for ICE candidates to be gathered with timeout
-    const maxWaitTime = Duration(seconds: 3);
-    const checkInterval = Duration(milliseconds: 100);
     int waitedTime = 0;
-    
-    while (waitedTime < maxWaitTime.inMilliseconds) {
-      await Future.delayed(checkInterval);
-      waitedTime += checkInterval.inMilliseconds;
+    while (waitedTime < _iceGatheringTimeout.inMilliseconds) {
+      await Future.delayed(_iceGatheringCheckInterval);
+      waitedTime += _iceGatheringCheckInterval.inMilliseconds;
       
-      // Get current ICE candidates
       final currentCandidates = _webrtcService!.getIceCandidates();
       if (currentCandidates.isNotEmpty) {
-        iceCandidates = List.from(currentCandidates);
-        Utils.log('WebRTC', 'Gathered ${iceCandidates.length} ICE candidates');
-        
-        // Log details of each ICE candidate
-        for (int i = 0; i < iceCandidates.length; i++) {
-          final candidate = iceCandidates[i];
-          Utils.log('WebRTC', 'ICE Candidate ${i + 1}:');
-          Utils.log('WebRTC', '   Candidate: ${candidate.candidate}');
-          Utils.log('WebRTC', '   SDP Mid: ${candidate.sdpMid}');
-          Utils.log('WebRTC', '   SDP MLine Index: ${candidate.sdpMLineIndex}');
-        }
-        break;
+        Utils.log(CallConstants.webRtcRole, '${CallConstants.gatheredIceCandidates} ${currentCandidates.length} ICE candidates');
+        return List.from(currentCandidates);
       }
     }
     
-    if (iceCandidates.isEmpty) {
-      Utils.log('WebRTC', 'No ICE candidates gathered within ${maxWaitTime.inSeconds}s timeout');
-    }
-    
-    Utils.log('WebRTC', '=== END ICE GATHERING ===');
-    return iceCandidates;
+    Utils.log(CallConstants.webRtcRole, '${CallConstants.noIceCandidatesGathered} ${_iceGatheringTimeout.inSeconds}${CallConstants.timeoutSeconds}');
+    return [];
   }
 
-  /// Set local description with error handling
   Future<bool> setLocalDescription(RTCSessionDescription description) async {
     try {
       if (_webrtcService == null) {
-        Utils.log('WebRTC', 'WebRTC service not initialized');
+        Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceNotInitialized);
         return false;
       }
 
       final result = await _webrtcService!.setLocalDescription(description);
       return result.fold(
         (failure) {
-          Utils.log('WebRTC', 'Failed to set local description: ${failure.message}');
+          Utils.log(CallConstants.webRtcRole, '${CallConstants.failedToSetLocalDescription}: ${failure.message}');
           return false;
         },
         (_) {
-          Utils.log('WebRTC', 'Local description set successfully');
+          Utils.log(CallConstants.webRtcRole, CallConstants.localDescriptionSetSuccessfully);
           return true;
         },
       );
     } catch (e) {
-      handleWebRTCError('setLocalDescription', e);
+      _logWebRTCError('setLocalDescription', e);
       return false;
     }
   }
 
-  /// Set remote description with error handling
   Future<bool> setRemoteDescription(RTCSessionDescription description) async {
     try {
       if (_webrtcService == null) {
-        Utils.log('WebRTC', 'WebRTC service not initialized');
+        Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceNotInitialized);
         return false;
       }
 
       final result = await _webrtcService!.setRemoteDescription(description);
       return result.fold(
         (failure) {
-          Utils.log('WebRTC', 'Failed to set remote description: ${failure.message}');
+          Utils.log(CallConstants.webRtcRole, '${CallConstants.failedToSetRemoteDescription}: ${failure.message}');
           return false;
         },
         (_) {
-          Utils.log('WebRTC', 'Remote description set successfully');
+          Utils.log(CallConstants.webRtcRole, CallConstants.remoteDescriptionSetSuccessfully);
           return true;
         },
       );
     } catch (e) {
-      handleWebRTCError('setRemoteDescription', e);
+      _logWebRTCError('setRemoteDescription', e);
       return false;
     }
   }
 
-  /// Add ICE candidate with error handling
   Future<bool> addIceCandidate(RTCIceCandidate candidate) async {
     try {
       if (_webrtcService == null) {
-        Utils.log('WebRTC', 'WebRTC service not initialized');
+        Utils.log(CallConstants.webRtcRole, CallConstants.webRtcServiceNotInitialized);
         return false;
       }
 
       final result = await _webrtcService!.addIceCandidate(candidate);
       return result.fold(
         (failure) {
-          Utils.log('WebRTC', 'Failed to add ICE candidate: ${failure.message}');
+          Utils.log(CallConstants.webRtcRole, '${CallConstants.failedToAddIceCandidate}: ${failure.message}');
           return false;
         },
         (_) {
-          Utils.log('WebRTC', 'ICE candidate added successfully');
+          Utils.log(CallConstants.webRtcRole, CallConstants.iceCandidateAddedSuccessfully);
           return true;
         },
       );
     } catch (e) {
-      handleWebRTCError('addIceCandidate', e);
+      _logWebRTCError('addIceCandidate', e);
       return false;
     }
   }
 
-  /// Stop listening to handshake changes
   void stopListening() {
-    Utils.log('Handshake', 'Stopping handshake listener');
+    Utils.log(CallConstants.handshakeRole, CallConstants.stoppingHandshakeListener);
     _handshakeSubscription?.cancel();
     _handshakeSubscription = null;
   }
 
-  /// Dispose common resources
   void dispose() {
     stopListening();
     _handshakeService?.dispose();
