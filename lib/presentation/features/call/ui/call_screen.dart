@@ -7,15 +7,18 @@ import '../../../../core/errors/failures.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../provider/call_provider.dart';
-import '../../login/provider/auth_provider.dart';
 
 class CallScreen extends ConsumerStatefulWidget {
+  final String currentUserId;      // ✅ Explicit dependency
+  final String currentUserName;    // ✅ Explicit dependency
   final User friend;
   final bool isIncomingCall;
   final String? handshakeId;
   
   const CallScreen({
     super.key,
+    required this.currentUserId,    // ✅ Required parameter
+    required this.currentUserName,  // ✅ Required parameter
     required this.friend,
     this.isIncomingCall = false,
     this.handshakeId,
@@ -149,34 +152,31 @@ class _CallScreenState extends ConsumerState<CallScreen>
 
   void _initializeHandshake() async {
     try {
-      final authState = ref.read(authProvider);
-      if (authState.currentUser != null) {
-        final callNotifier = ref.read(callNotifierProvider.notifier);
+      final callNotifier = ref.read(callNotifierProvider.notifier);
+      
+      if (widget.isIncomingCall) {
+        Utils.log('Receiver', 'Incoming call detected - starting to listen for handshake changes');
+        Utils.log('Receiver', 'Handshake ID: ${widget.handshakeId}');
         
-        if (widget.isIncomingCall) {
-          Utils.log('Receiver', 'Incoming call detected - starting to listen for handshake changes');
-          Utils.log('Receiver', 'Handshake ID: ${widget.handshakeId}');
-          
-          // For incoming calls, just start listening without initializing
-          // Extract caller and receiver from handshakeId or use friend.id as caller
-          final callerId = widget.friend.id; // The friend is the caller in incoming calls
-          final receiverId = authState.currentUser!.id; // Current user is the receiver
-          
-          // Start listening to handshake changes for incoming calls
-          callNotifier.startListeningToHandshake(
-            callerId: callerId,
-            receiverId: receiverId,
-          );
-          
-        } else {
-          // For outgoing calls, initialize handshake and start listening
-          await callNotifier.initiateHandshake(
-            callerId: authState.currentUser!.id,
-            receiverId: widget.friend.id,
-          );
-          
-          Utils.log('Caller', 'Firebase handshake initialized for outgoing call');
-        }
+        // For incoming calls, just start listening without initializing
+        // The friend is the caller in incoming calls
+        final callerId = widget.friend.id;
+        final receiverId = widget.currentUserId; // ✅ Use passed user ID
+        
+        // Start listening to handshake changes for incoming calls
+        callNotifier.startListeningToHandshake(
+          callerId: callerId,
+          receiverId: receiverId,
+        );
+        
+      } else {
+        // For outgoing calls, initialize handshake and start listening
+        await callNotifier.initiateHandshake(
+          callerId: widget.currentUserId,    // ✅ Use passed user ID
+          receiverId: widget.friend.id,
+        );
+        
+        Utils.log('Caller', 'Firebase handshake initialized for outgoing call');
       }
     } catch (e) {
       Utils.log('Call', 'Error initializing handshake: $e');
@@ -250,20 +250,14 @@ class _CallScreenState extends ConsumerState<CallScreen>
       _isSwipeGesture = false;
     });
     
-    // Get current user and close call with Firebase update
-    final authState = ref.read(authProvider);
+    // Close call with Firebase update using passed user data
     final callNotifier = ref.read(callNotifierProvider.notifier);
     
-    if (authState.currentUser != null) {
-      // Close call and update Firebase status to 'close_call'
-      await callNotifier.closeCall(
-        callerId: authState.currentUser!.id,
-        receiverId: widget.friend.id,
-      );
-    } else {
-      // Fallback to regular end call if no auth state
-      callNotifier.endCall();
-    }
+    // Close call and update Firebase status to 'close_call'
+    await callNotifier.closeCall(
+      callerId: widget.currentUserId,    // ✅ Use passed user ID
+      receiverId: widget.friend.id,
+    );
 
     // Reset the swipe animation
     _swipeController.reset();

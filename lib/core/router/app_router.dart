@@ -40,6 +40,10 @@ final appRouter = GoRouter(
         final isIncomingCall = queryParams['incoming'] == 'true';
         final handshakeId = queryParams['handshakeId'];
         
+        // ✅ Get user data from navigation parameters
+        final currentUserId = queryParams['currentUserId']!;
+        final currentUserName = queryParams['currentUserName']!;
+        
         // Create a mock user with proper name mapping
         final friend = User(
           id: friendId,
@@ -52,6 +56,8 @@ final appRouter = GoRouter(
         );
         
         return CallScreen(
+          currentUserId: currentUserId,        // ✅ Pass user ID
+          currentUserName: currentUserName,    // ✅ Pass user name
           friend: friend,
           isIncomingCall: isIncomingCall,
           handshakeId: handshakeId,

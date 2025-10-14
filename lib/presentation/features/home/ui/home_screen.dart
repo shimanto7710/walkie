@@ -60,8 +60,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (next.status == CallStatus.ringing && next.remoteUserId != null) {
         print('📞 Incoming call detected on home screen from ${next.remoteUserId}');
         
-        // Navigate to call screen
-        context.go('/call/${next.remoteUserId}');
+        // Navigate to call screen with user data
+        final authState = ref.read(authProvider);
+        if (authState.currentUser != null) {
+          context.go('/call/${next.remoteUserId}?currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
+        }
       }
     });
 
@@ -90,7 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (next.receiverId == authState.currentUser!.id) {
                   print('📞 Navigating to call screen for incoming call from ${next.callerId}');
                   // Pass handshake data to indicate this is an incoming call
-                  context.go('/call/${next.callerId}?incoming=true&handshakeId=${next.callerId}_${next.receiverId}');
+                  context.go('/call/${next.callerId}?incoming=true&handshakeId=${next.callerId}_${next.receiverId}&currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
                 }
                 break;
               case 'ringing':
@@ -283,7 +286,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _startCall(BuildContext context, User friend) {
     print('📞 Starting call with ${friend.name}');
-    context.go('/call/${friend.id}');
+    final authState = ref.read(authProvider);
+    if (authState.currentUser != null) {
+      context.go('/call/${friend.id}?currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
+    }
   }
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
