@@ -43,13 +43,19 @@ final appRouter = GoRouter(
         final currentUserId = queryParams['currentUserId']!;
         final currentUserName = queryParams['currentUserName']!;
         
+        // Get friend data from query parameters instead of hardcoded values
+        final friendName = queryParams['friendName'] ?? 'Unknown Friend';
+        final friendEmail = queryParams['friendEmail'] ?? '$friendId@example.com';
+        final friendStatus = queryParams['friendStatus'] == 'true';
+        final friendLastActive = queryParams['friendLastActive'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+        
         final friend = User(
           id: friendId,
-          name: _getFriendName(friendId),
-          email: '$friendId@example.com',
+          name: friendName,
+          email: friendEmail,
           password: '',
-          status: true,
-          lastActive: DateTime.now().millisecondsSinceEpoch.toString(),
+          status: friendStatus,
+          lastActive: friendLastActive,
           friends: {},
         );
         
@@ -64,16 +70,3 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-String _getFriendName(String friendId) {
-  switch (friendId) {
-    case 'ozil':
-      return 'Mesut Ozil';
-    case 'guler':
-      return 'Arda Guler';
-    case 'james':
-      return 'James Rodriguez';
-    default:
-      return 'Unknown Friend';
-  }
-}

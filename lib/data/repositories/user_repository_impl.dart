@@ -25,6 +25,18 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
+  Future<Either<Failure, User?>> getUserById(String userId) async {
+    try {
+      final user = await _dataSource.getUserById(userId);
+      return Right(user);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(UnknownFailure('Unexpected error: $e'));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> updateUserStatus(String userId, bool status) async {
     try {
       await _dataSource.updateUserStatus(userId, status);

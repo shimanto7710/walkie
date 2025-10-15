@@ -7,7 +7,7 @@ part of 'global_handshake_provider.dart';
 // **************************************************************************
 
 String _$globalHandshakeNotifierHash() =>
-    r'92145cd2c18ddc38b2afda7f7ccbc595edb4a24b';
+    r'd6553956ef10e7a3969c628e991101ec36211a7a';
 
 /// See also [GlobalHandshakeNotifier].
 @ProviderFor(GlobalHandshakeNotifier)

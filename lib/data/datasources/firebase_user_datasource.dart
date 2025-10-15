@@ -87,6 +87,34 @@ class FirebaseUserDataSource {
     }
   }
 
+  Future<User?> getUserById(String userId) async {
+    try {
+      final userRef = _database.ref('users/$userId');
+      final snapshot = await userRef.get().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw ServerException('Firebase call timed out');
+        },
+      );
+
+      if (snapshot.exists) {
+        final userData = Map<String, dynamic>.from(snapshot.value as Map);
+        return User.fromJson({
+          'id': userId,
+          'name': userData['name'] ?? '',
+          'email': userData['email'] ?? '',
+          'password': userData['pass'] ?? '',
+          'status': userData['status'] == true,
+          'lastActive': userData['lastActive']?.toString() ?? '',
+          'friends': _convertFriendsData(userData['friends']),
+        });
+      }
+      return null;
+    } catch (e) {
+      throw ServerException('Failed to get user by ID: $e');
+    }
+  }
+
   Future<void> updateUserStatus(String userId, bool status) async {
     try {
       await _database.ref('users').child(userId).update({

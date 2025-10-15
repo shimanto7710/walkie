@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_database/firebase_database.dart';
 import '../provider/friends_provider.dart';
 import '../../../../presentation/widgets/user_list_item.dart';
 import '../../login/provider/auth_provider.dart';
@@ -10,7 +9,8 @@ import '../../call/provider/global_handshake_provider.dart';
 import '../../../../domain/entities/user.dart';
 import '../../../../domain/entities/call_state.dart';
 import '../../../../domain/entities/handshake.dart';
-import '../../../../utils/firebase_cleanup.dart';
+import '../../../../domain/repositories/user_repository.dart';
+import '../../../../core/di/injection.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -70,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 break;
               case 'call_acknowledge':
                 if (next.receiverId == authState.currentUser!.id) {
-                  context.go('/call/${next.callerId}?incoming=true&handshakeId=${next.callerId}_${next.receiverId}&currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
+                  _handleIncomingCall(context, next, authState.currentUser!);
                 }
                 break;
               case 'ringing':
@@ -94,39 +94,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const Text('Walkie'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile feature coming soon!')),
-              );
-            },
-            tooltip: 'Profile',
-          ),
-          IconButton(
-            icon: const Icon(Icons.cleaning_services),
-            onPressed: () => _showCleanupDialog(context),
-            tooltip: 'Clean Firebase Signals',
-          ),
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () => _testHandshake(context, ref),
-            tooltip: 'Test Handshake',
-          ),
-          IconButton(
-            icon: const Icon(Icons.wifi),
-            onPressed: () => _testFirebaseListener(context, ref),
-            tooltip: 'Test Firebase Listener',
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings feature coming soon!')),
-              );
-            },
-            tooltip: 'Settings',
-          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _showLogoutDialog(context, ref),
@@ -223,23 +190,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
               ElevatedButton(
-                    onPressed: () => ref.invalidate(friendsNotifierProvider),
+                onPressed: () => ref.invalidate(friendsNotifierProvider),
                 child: const Text('Retry'),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () => _cleanupFirebaseSignals(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Clean Signals'),
-                  ),
-                ],
               ),
             ],
           ),
@@ -251,7 +204,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _startCall(BuildContext context, User friend) {
     final authState = ref.read(authProvider);
     if (authState.currentUser != null) {
-      context.go('/call/${friend.id}?currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}');
+      // Pass actual friend data from Firebase instead of hardcoded values
+      final friendName = Uri.encodeComponent(friend.name);
+      final friendEmail = Uri.encodeComponent(friend.email);
+      final friendStatus = friend.status.toString();
+      final friendLastActive = friend.lastActive;
+      
+      context.go('/call/${friend.id}?currentUserId=${authState.currentUser!.id}&currentUserName=${authState.currentUser!.name}&friendName=$friendName&friendEmail=$friendEmail&friendStatus=$friendStatus&friendLastActive=$friendLastActive');
+    }
+  }
+
+  void _handleIncomingCall(BuildContext context, Handshake handshake, User currentUser) async {
+    try {
+      // Fetch caller information from Firebase directly
+      final userRepository = getIt<UserRepository>();
+      final result = await userRepository.getUserById(handshake.callerId);
+      
+      result.fold(
+        (failure) {
+          // Fallback to basic navigation if caller data is not available
+          context.go('/call/${handshake.callerId}?incoming=true&handshakeId=${handshake.callerId}_${handshake.receiverId}&currentUserId=${currentUser.id}&currentUserName=${currentUser.name}');
+        },
+        (caller) {
+          if (caller != null) {
+            // Pass actual caller data from Firebase
+            final callerName = Uri.encodeComponent(caller.name);
+            final callerEmail = Uri.encodeComponent(caller.email);
+            final callerStatus = caller.status.toString();
+            final callerLastActive = caller.lastActive;
+            
+            context.go('/call/${handshake.callerId}?incoming=true&handshakeId=${handshake.callerId}_${handshake.receiverId}&currentUserId=${currentUser.id}&currentUserName=${currentUser.name}&friendName=$callerName&friendEmail=$callerEmail&friendStatus=$callerStatus&friendLastActive=$callerLastActive');
+          } else {
+            // Fallback to basic navigation if caller data is not available
+            context.go('/call/${handshake.callerId}?incoming=true&handshakeId=${handshake.callerId}_${handshake.receiverId}&currentUserId=${currentUser.id}&currentUserName=${currentUser.name}');
+          }
+        },
+      );
+    } catch (e) {
+      // Fallback to basic navigation if there's an error
+      context.go('/call/${handshake.callerId}?incoming=true&handshakeId=${handshake.callerId}_${handshake.receiverId}&currentUserId=${currentUser.id}&currentUserName=${currentUser.name}');
     }
   }
 
@@ -290,197 +281,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _showCleanupDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.cleaning_services, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Clean Firebase Signals'),
-            ],
-          ),
-          content: const Text(
-            'This will remove all signal data from Firebase Realtime Database. '
-            'This includes all call requests, offers, answers, and ICE candidates.\n\n'
-            'Are you sure you want to proceed?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _cleanupFirebaseSignals();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Clean Signals'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _cleanupFirebaseSignals() async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Cleaning up signals...'),
-            ],
-          ),
-        ),
-      );
-
-      final beforeCount = await FirebaseCleanup.getSignalCount();
-      await FirebaseCleanup.deleteAllSignals();
-      
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Cleaned up $beforeCount signals from Firebase!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Failed to clean signals: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  void _testHandshake(BuildContext context, WidgetRef ref) async {
-    try {
-      final authState = ref.read(authProvider);
-      if (authState.currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ No authenticated user found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final currentUserId = authState.currentUser!.id;
-      final currentUserName = authState.currentUser!.name;
-      
-      final testUserId = currentUserId == 'guler' ? 'ozil' : 'guler';
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🧪 Testing handshake: $currentUserName -> $testUserId'),
-          backgroundColor: Colors.blue,
-        ),
-      );
-
-      final callNotifier = ref.read(callNotifierProvider.notifier);
-      callNotifier.startCall();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Call test initiated!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Handshake test failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _testFirebaseListener(BuildContext context, WidgetRef ref) async {
-    try {
-      final authState = ref.read(authProvider);
-      if (authState.currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ No authenticated user found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final currentUserId = authState.currentUser!.id;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🧪 Testing Firebase listener for user: $currentUserId'),
-          backgroundColor: Colors.blue,
-        ),
-      );
-
-      final database = FirebaseDatabase.instance.ref();
-      final handshakeRef = database.child('handshakes');
-      
-      final subscription = handshakeRef.onValue.listen((event) {
-        if (event.snapshot.exists) {
-          final data = event.snapshot.value;
-          
-          if (data is Map<dynamic, dynamic>) {
-            for (final entry in data.entries) {
-              if (entry.value is Map) {
-                final handshakeData = Map<String, dynamic>.from(entry.value as Map);
-                
-                if (handshakeData['receiverId'] == currentUserId) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('🎯 Found handshake for you from: ${handshakeData['callerId']}'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              }
-            }
-          }
-        }
-      });
-      
-      Future.delayed(const Duration(seconds: 10), () {
-        subscription.cancel();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Firebase listener test completed! Check logs.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      });
-      
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Firebase listener test failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 }

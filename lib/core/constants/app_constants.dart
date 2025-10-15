@@ -35,17 +35,17 @@ class AppConstants {
       'This includes all call requests, offers, answers, and ICE candidates.\n\n'
       'Are you sure you want to proceed?';
   static const String cleaningUpText = 'Cleaning up signals...';
-  static const String cleanedUpSignalsText = '✅ Cleaned up signals from Firebase!';
-  static const String failedToCleanSignalsText = '❌ Failed to clean signals:';
+  static const String cleanedUpSignalsText = 'Cleaned up signals from Firebase!';
+  static const String failedToCleanSignalsText = 'Failed to clean signals:';
   
-  static const String testingHandshakeText = '🧪 Testing handshake:';
-  static const String callTestInitiatedText = '✅ Call test initiated!';
-  static const String handshakeTestFailedText = '❌ Handshake test failed:';
-  static const String testingFirebaseListenerText = '🧪 Testing Firebase listener for user:';
-  static const String firebaseListenerTestCompletedText = '✅ Firebase listener test completed! Check logs.';
-  static const String firebaseListenerTestFailedText = '❌ Firebase listener test failed:';
-  static const String foundHandshakeText = '🎯 Found handshake for you from:';
-  static const String noAuthenticatedUserText = '❌ No authenticated user found';
+  static const String testingHandshakeText = 'Testing handshake:';
+  static const String callTestInitiatedText = 'Call test initiated!';
+  static const String handshakeTestFailedText = 'Handshake test failed:';
+  static const String testingFirebaseListenerText = 'Testing Firebase listener for user:';
+  static const String firebaseListenerTestCompletedText = 'Firebase listener test completed! Check logs.';
+  static const String firebaseListenerTestFailedText = 'Firebase listener test failed:';
+  static const String foundHandshakeText = 'Found handshake for you from:';
+  static const String noAuthenticatedUserText = 'No authenticated user found';
   
   static const String profileTooltip = 'Profile';
   static const String cleanSignalsTooltip = 'Clean Firebase Signals';
