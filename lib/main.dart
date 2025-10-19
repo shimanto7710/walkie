@@ -9,27 +9,23 @@ import 'core/constants/app_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
 
+  try {
     try {
       final result = await InternetAddress.lookup('google.com');
       if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-      } else {
-      }
-    } catch (e) {
-    }
-    
+      } else {}
+    } catch (e) {}
+
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    
+
     await configureDependencies();
-    
   } catch (e) {
     rethrow;
   }
-  
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
