@@ -10,10 +10,8 @@ abstract class WebRTCService {
   Future<Either<Failure, void>> initialize();
   Future<Either<Failure, void>> startCall(String remoteUserId);
   Future<Either<Failure, void>> acceptCall();
-  Future<Either<Failure, void>> rejectCall();
   Future<Either<Failure, void>> endCall();
   Future<Either<Failure, void>> toggleMute();
-  Future<Either<Failure, void>> toggleSpeaker();
   Future<Either<Failure, MediaStream>> getUserMedia(WebRTCMediaConstraints constraints);
   Stream<WebRTCConnectionState> get connectionStateStream;
   WebRTCConnectionState get currentState;
@@ -255,17 +253,6 @@ class FlutterWebRTCService implements WebRTCService {
     }
   }
 
-  @override
-  Future<Either<Failure, void>> rejectCall() async {
-    try {
-      _updateConnectionState(_currentState.copyWith(
-        status: WebRTCConnectionStatus.disconnected,
-      ));
-      return const Right(null);
-    } catch (e) {
-      return Left(Failure.unknownFailure('Failed to reject call: $e'));
-    }
-  }
 
   @override
   Future<Either<Failure, void>> endCall() async {
@@ -332,18 +319,6 @@ class FlutterWebRTCService implements WebRTCService {
     }
   }
 
-  @override
-  Future<Either<Failure, void>> toggleSpeaker() async {
-    try {
-      _updateConnectionState(_currentState.copyWith(
-        isSpeakerOn: !_currentState.isSpeakerOn,
-      ));
-
-      return const Right(null);
-    } catch (e) {
-      return Left(Failure.unknownFailure('Failed to toggle speaker: $e'));
-    }
-  }
 
   void _updateConnectionState(WebRTCConnectionState newState) {
     _currentState = newState;

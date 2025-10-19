@@ -12,17 +12,6 @@ class UserRepositoryImpl implements UserRepository {
 
   UserRepositoryImpl(this._dataSource);
 
-  @override
-  Future<Either<Failure, List<User>>> getUsers() async {
-    try {
-      final users = await _dataSource.getUsers();
-      return Right(users);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(UnknownFailure('Unexpected error: $e'));
-    }
-  }
 
   @override
   Future<Either<Failure, User?>> getUserById(String userId) async {
@@ -48,26 +37,7 @@ class UserRepositoryImpl implements UserRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, void>> addUser(User user) async {
-    try {
-      await _dataSource.addUser(user);
-      return const Right(null);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(UnknownFailure('Unexpected error: $e'));
-    }
-  }
 
-  @override
-  Stream<List<User>> watchUsers() {
-    try {
-      return _dataSource.watchUsers();
-    } catch (e) {
-      throw ServerException('Failed to watch users: $e');
-    }
-  }
 
   @override
   Future<Either<Failure, List<User>>> getFriendsOfUser(String userId) async {

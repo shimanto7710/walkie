@@ -144,19 +144,3 @@ final signupUseCaseProvider = Provider<SignupUseCase>((ref) {
   return getIt<SignupUseCase>();
 });
 
-// Computed providers
-final isAuthenticatedProvider = Provider<bool>((ref) {
-  return ref.watch(authProvider).isAuthenticated;
-});
-
-final currentUserProvider = Provider<User?>((ref) {
-  return ref.watch(authProvider).currentUser;
-});
-
-final isLoadingProvider = Provider<bool>((ref) {
-  return ref.watch(authProvider).isLoading;
-});
-
-final errorMessageProvider = Provider<String?>((ref) {
-  return ref.watch(authProvider).errorMessage;
-});

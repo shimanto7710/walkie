@@ -25,67 +25,7 @@ class FirebaseUserDataSource {
     return {};
   }
 
-  Stream<List<User>> watchUsers() {
-    try {
-      return _database.ref('users').onValue.map((event) {
-        if (event.snapshot.exists) {
-          final data = event.snapshot.value;
-          if (data is Map) {
-            return data.entries
-              .map((entry) => User.fromJson({
-                    'id': entry.key,
-                    'name': entry.value['name'] ?? '',
-                    'email': entry.value['email'] ?? '',
-                    'password': entry.value['pass'] ?? '',
-                    'status': entry.value['status'] == true,
-                    'lastActive': entry.value['lastActive']?.toString() ?? '',
-                    'friends': _convertFriendsData(entry.value['friends']),
-                  }))
-              .toList();
-          }
-        }
-        return <User>[];
-      });
-    } catch (e) {
-      throw ServerException('Failed to watch users: $e');
-    }
-  }
 
-  Future<List<User>> getUsers() async {
-    try {
-      final testRef = _database.ref();
-      // Add timeout to prevent hanging
-      final snapshot = await _database.ref('users').get().timeout(
-        const Duration(seconds: 5), // Reduced timeout for faster debugging
-        onTimeout: () {
-          throw ServerException('Firebase call timed out');
-        },
-      );
-      
-      if (snapshot.exists) {
-        final data = snapshot.value;
-        if (data is Map) {
-        
-        final users = data.entries
-            .map((entry) => User.fromJson({
-                  'id': entry.key,
-                  'name': entry.value['name'] ?? '',
-                  'email': entry.value['email'] ?? '',
-                  'password': entry.value['pass'] ?? '',
-                  'status': entry.value['status'] == true,
-                  'lastActive': entry.value['lastActive']?.toString() ?? '',
-                  'friends': _convertFriendsData(entry.value['friends']),
-                }))
-            .toList();
-
-        return users;
-        }
-      }
-      return [];
-    } catch (e) {
-      throw ServerException('Failed to get users: $e');
-    }
-  }
 
   Future<User?> getUserById(String userId) async {
     try {
@@ -235,17 +175,4 @@ class FirebaseUserDataSource {
     }
   }
 
-  Future<void> addUser(User user) async {
-    try {
-      await _database.ref('users').child(user.id).set({
-        'name': user.name,
-        'email': user.email,
-        'pass': user.password,
-        'status': user.status,
-        'lastActive': user.lastActive,
-      });
-    } catch (e) {
-      throw ServerException('Failed to add user: $e');
-    }
-  }
 }

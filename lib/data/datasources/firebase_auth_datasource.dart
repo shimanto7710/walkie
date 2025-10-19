@@ -73,28 +73,6 @@ class FirebaseAuthDataSource {
     }
   }
 
-  Future<User?> getCurrentUser(String userId) async {
-    try {
-      final userRef = _database.ref('users/$userId');
-      final snapshot = await userRef.get();
-
-      if (snapshot.exists) {
-        final userData = Map<String, dynamic>.from(snapshot.value as Map);
-        return User.fromJson({
-          'id': userId,
-          'name': userData['name'],
-          'email': userData['email'],
-          'password': userData['pass'],
-          'status': userData['status'],
-          'lastActive': userData['lastActive'],
-          'friends': _convertFriendsData(userData['friends']),
-        });
-      }
-      return null;
-    } catch (e) {
-      throw ServerException('Failed to get current user: $e');
-    }
-  }
 
   Future<User> createUser(String name, String email, String password) async {
     

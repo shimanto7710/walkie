@@ -51,14 +51,6 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, User?>> getCurrentUser() async {
-    try {
-      return const Right(null);
-    } catch (e) {
-      return Left(UnknownFailure('Failed to get current user: $e'));
-    }
-  }
 
   @override
   Future<Either<Failure, void>> updateUserStatus(String userId, bool status) async {

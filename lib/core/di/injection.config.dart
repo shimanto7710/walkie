@@ -17,11 +17,9 @@ import 'package:walkie/data/repositories/auth_repository_impl.dart' as _i873;
 import 'package:walkie/data/repositories/user_repository_impl.dart' as _i60;
 import 'package:walkie/domain/repositories/auth_repository.dart' as _i756;
 import 'package:walkie/domain/repositories/user_repository.dart' as _i685;
-import 'package:walkie/domain/usecases/get_users.dart' as _i651;
 import 'package:walkie/domain/usecases/login_usecase.dart' as _i325;
 import 'package:walkie/domain/usecases/signup_usecase.dart' as _i678;
 import 'package:walkie/domain/usecases/update_user_status.dart' as _i543;
-import 'package:walkie/domain/usecases/watch_users.dart' as _i921;
 
 extension GetItInjectableX on _i174.GetIt {
 // initializes the registration of main-scope dependencies inside of GetIt
@@ -34,12 +32,8 @@ extension GetItInjectableX on _i174.GetIt {
       environment,
       environmentFilter,
     );
-    gh.factory<_i651.GetUsers>(
-        () => _i651.GetUsers(gh<_i685.UserRepository>()));
     gh.factory<_i543.UpdateUserStatus>(
         () => _i543.UpdateUserStatus(gh<_i685.UserRepository>()));
-    gh.factory<_i921.WatchUsers>(
-        () => _i921.WatchUsers(gh<_i685.UserRepository>()));
     gh.factory<_i291.FirebaseUserDataSource>(
         () => _i291.FirebaseUserDataSource(gh<_i345.FirebaseDatabase>()));
     gh.factory<_i366.FirebaseAuthDataSource>(
