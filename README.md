@@ -232,10 +232,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Developer
 
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
+**Md Afser Uddin (shimanto7710)**
+- GitHub: [@shimanto7710](https://github.com/shimanto7710/)
+- LinkedIn: [Md Afser Uddin](https://www.linkedin.com/in/afser10/)
+- Email: shimanto7710@gmail.com
 
 ## 🙏 Acknowledgments
 
